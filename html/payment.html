@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment — STRIDE</title>
+  <meta name="description" content="Complete your STRIDE order with our secure payment process.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+
+  <nav id="main-nav"></nav>
+
+  <header class="page-header">
+    <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">Checkout</p>
+    <h1 class="text-4xl sm:text-5xl font-bold text-white">Payment</h1>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <!-- Payment Form (3 cols) -->
+      <div class="lg:col-span-3">
+        <form id="payment-form" novalidate>
+          <!-- Card Preview -->
+          <div class="mb-8">
+            <div class="payment-card-preview mx-auto animate-fade-in">
+              <div class="flex justify-between items-start relative z-10">
+                <span id="card-type-icon" class="text-lg">💳</span>
+                <span class="text-xs text-gray-400 uppercase tracking-wider">Credit Card</span>
+              </div>
+              <div class="relative z-10">
+                <p class="text-xl font-mono tracking-[0.15em] text-white mb-4" id="preview-number">•••• •••• •••• ••••</p>
+                <div class="flex justify-between items-end">
+                  <div>
+                    <p class="text-[10px] text-gray-400 uppercase mb-0.5">Card Holder</p>
+                    <p class="text-sm font-medium text-white" id="preview-name">YOUR NAME</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-gray-400 uppercase mb-0.5">Expires</p>
+                    <p class="text-sm font-medium text-white" id="preview-expiry">MM/YY</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Details -->
+          <div class="glass-card p-6 mb-6">
+            <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">💳 Card Details</h2>
+
+            <div class="mb-4">
+              <label for="card-number" class="block text-sm font-medium text-gray-300 mb-2">Card Number</label>
+              <div class="relative">
+                <input type="text" id="card-number" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19">
+              </div>
+              <p class="error-message"></p>
+            </div>
+
+            <div class="mb-4">
+              <label for="card-name" class="block text-sm font-medium text-gray-300 mb-2">Cardholder Name</label>
+              <input type="text" id="card-name" class="form-input" placeholder="John Doe">
+              <p class="error-message"></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="card-expiry" class="block text-sm font-medium text-gray-300 mb-2">Expiry Date</label>
+                <input type="text" id="card-expiry" class="form-input" placeholder="MM/YY" maxlength="5">
+                <p class="error-message"></p>
+              </div>
+              <div>
+                <label for="card-cvv" class="block text-sm font-medium text-gray-300 mb-2">CVV</label>
+                <input type="text" id="card-cvv" class="form-input" placeholder="123" maxlength="4">
+                <p class="error-message"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing Address -->
+          <div class="glass-card p-6 mb-6">
+            <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">📍 Billing Address</h2>
+
+            <div class="mb-4">
+              <label for="billing-address" class="block text-sm font-medium text-gray-300 mb-2">Street Address</label>
+              <input type="text" id="billing-address" class="form-input" placeholder="123, MG Road">
+              <p class="error-message"></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="billing-city" class="block text-sm font-medium text-gray-300 mb-2">City</label>
+                <input type="text" id="billing-city" class="form-input" placeholder="Mumbai">
+                <p class="error-message"></p>
+              </div>
+              <div>
+                <label for="billing-zip" class="block text-sm font-medium text-gray-300 mb-2">PIN Code</label>
+                <input type="text" id="billing-zip" class="form-input" placeholder="400001" maxlength="6">
+                <p class="error-message"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-primary w-full py-4 text-base" id="pay-btn">
+            🔒 Pay <span id="pay-btn-total">₹0</span>
+          </button>
+
+          <p class="text-center text-xs text-gray-500 mt-3 flex items-center justify-center gap-1">
+            🔒 Your payment info is encrypted and secure
+          </p>
+        </form>
+      </div>
+
+      <!-- Order Summary (2 cols) -->
+      <div class="lg:col-span-2">
+        <div class="glass-card p-6 sticky top-24">
+          <h2 class="text-lg font-bold text-white mb-5">Order Summary</h2>
+
+          <div class="space-y-1 mb-6 max-h-60 overflow-y-auto" id="payment-items">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div class="space-y-3 pt-4 border-t border-white/5">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Subtotal</span>
+              <span class="text-white" id="pay-subtotal">₹0</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Shipping</span>
+              <span class="text-white" id="pay-shipping">₹0</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Tax</span>
+              <span class="text-white" id="pay-tax">₹0</span>
+            </div>
+            <div class="h-px bg-white/10"></div>
+            <div class="flex justify-between">
+              <span class="font-semibold text-white">Total</span>
+              <span class="font-bold text-xl text-amber-400" id="pay-total">₹0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-content text-center max-w-sm">
+      <div class="text-6xl mb-4 animate-bounce-in">🎉</div>
+      <h2 class="text-2xl font-bold text-white mb-2">Order Confirmed!</h2>
+      <p class="text-gray-400 mb-2">Your order has been placed successfully.</p>
+      <p class="text-amber-400 font-mono text-lg mb-6" id="order-id-display">ORD-2026-XXXX</p>
+      <div class="flex gap-3">
+        <button onclick="goToOrders()" class="btn-primary flex-1 py-3">View Orders</button>
+        <a href="../index.html" class="btn-secondary flex-1 py-3 text-center">Home</a>
+      </div>
+    </div>
+  </div>
+
+  <footer id="main-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/payment.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Wishlist — STRIDE</title>
+  <meta name="description" content="View and manage your STRIDE wishlist. Save your favorite shoes for later.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+
+  <nav id="main-nav"></nav>
+
+  <header class="page-header">
+    <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">Your Favorites</p>
+    <h1 class="text-4xl sm:text-5xl font-bold text-white">Wishlist ❤️</h1>
+    <p class="text-gray-400 mt-3">Items you've saved for later</p>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="breadcrumb" id="breadcrumbs"></div>
+    <div id="wishlist-content"></div>
+  </main>
+
+  <div class="modal-overlay" id="quick-view-modal"></div>
+  <footer id="main-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/products.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof setBreadcrumbs === 'function') setBreadcrumbs([{ label: 'Wishlist' }]);
+      renderWishlistPage();
+    });
+
+    function renderWishlistPage() {
+      const container = document.getElementById('wishlist-content');
+      const wishlist = getWishlist();
+      const products = PRODUCTS.filter(p => wishlist.includes(p.id));
+
+      if (products.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20 animate-fade-in">
+            <div class="text-6xl mb-4">💔</div>
+            <h3 class="text-xl font-semibold text-white mb-2">Your wishlist is empty</h3>
+            <p class="text-gray-400 mb-6">Browse our collection and heart the items you love!</p>
+            <a href="products.html" class="btn-primary px-8 py-3">🛍️ Start Shopping</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="flex justify-between items-center mb-6">
+          <p class="text-gray-400 text-sm">${products.length} item${products.length !== 1 ? 's' : ''} in wishlist</p>
+          <button onclick="clearWishlist()" class="btn-danger text-xs px-4 py-2">Clear All</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          ${products.map((product, i) => `
+            <div class="product-card animate-fade-in-up" style="animation-delay: ${i * 0.08}s">
+              <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
+                ${product.badge ? `<div class="product-badge">${product.badge.toUpperCase()}</div>` : ''}
+                <button class="wishlist-btn active" data-id="${product.id}" onclick="event.stopPropagation(); removeAndRefresh(${product.id})">❤️</button>
+                <img src="${IMG_PATH}${product.image}" alt="${product.name}" class="w-full h-full object-contain p-6" loading="lazy">
+                <div class="zoom-lens"><span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span></div>
+              </div>
+              <div class="p-5" onclick="openQuickView(${product.id})">
+                <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider">${product.subcategory}</p>
+                <h3 class="font-semibold text-white mt-1">${product.name}</h3>
+                <p class="text-xs text-gray-500">${product.brand}</p>
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-lg font-bold text-white">${formatPrice(product.price)}</span>
+                    ${product.originalPrice ? `<span class="text-sm text-gray-500 line-through">${formatPrice(product.originalPrice)}</span>` : ''}
+                  </div>
+                  <button onclick="event.stopPropagation(); addToCart(${product.id}, ${product.sizes[0]})" class="btn-primary text-xs px-3 py-1.5">🛒 Add</button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function removeAndRefresh(productId) {
+      toggleWishlist(productId);
+      setTimeout(renderWishlistPage, 100);
+    }
+
+    function clearWishlist() {
+      localStorage.removeItem('stride_wishlist');
+      updateWishBadge();
+      renderWishlistPage();
+      showToast('Wishlist cleared', 'info');
+    }
+  </script>
+</body>
+</html>

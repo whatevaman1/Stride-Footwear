@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — STRIDE</title>
+  <meta name="description" content="Create your STRIDE account and start shopping premium footwear today.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+
+  <nav id="main-nav"></nav>
+
+  <main class="min-h-screen flex items-center justify-center px-4 pt-20 pb-12">
+    <div class="w-full max-w-md animate-fade-in-up">
+      <div class="text-center mb-8">
+        <a href="../index.html" class="text-3xl font-extrabold gradient-text">STRIDE</a>
+        <h1 class="text-2xl font-bold text-white mt-4">Create Your Account</h1>
+        <p class="text-gray-400 mt-2">Join 50,000+ happy customers</p>
+      </div>
+
+      <div class="glass-card p-8">
+        <form id="signup-form" novalidate>
+          <!-- Full Name -->
+          <div class="mb-5">
+            <label for="signup-name" class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+            <div class="relative">
+              <input type="text" id="signup-name" class="form-input pl-11" placeholder="John Doe" required>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">👤</span>
+            </div>
+            <p class="error-message"></p>
+          </div>
+
+          <!-- Email -->
+          <div class="mb-5">
+            <label for="signup-email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+            <div class="relative">
+              <input type="email" id="signup-email" class="form-input pl-11" placeholder="you@example.com" required>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📧</span>
+            </div>
+            <p class="error-message"></p>
+          </div>
+
+          <!-- Phone -->
+          <div class="mb-5">
+            <label for="signup-phone" class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+            <div class="relative">
+              <input type="tel" id="signup-phone" class="form-input pl-11" placeholder="+1 (555) 123-4567" required>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📱</span>
+            </div>
+            <p class="error-message"></p>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-5">
+            <label for="signup-password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+            <div class="relative">
+              <input type="password" id="signup-password" class="form-input pl-11" placeholder="Min. 8 characters" required>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
+            </div>
+            <p class="error-message"></p>
+            <!-- Password Strength -->
+            <div class="mt-2">
+              <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div id="password-strength" class="h-full rounded-full transition-all duration-300 bg-gray-700" style="width: 0%"></div>
+              </div>
+              <p id="password-strength-text" class="text-xs mt-1"></p>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="mb-5">
+            <label for="signup-confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+            <div class="relative">
+              <input type="password" id="signup-confirm-password" class="form-input pl-11" placeholder="Repeat password" required>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
+            </div>
+            <p class="error-message"></p>
+          </div>
+
+          <!-- Terms -->
+          <label class="flex items-start gap-3 mb-6 cursor-pointer">
+            <input type="checkbox" class="custom-checkbox mt-0.5" required id="signup-terms">
+            <span class="text-sm text-gray-400">I agree to the <a href="#" class="text-amber-400 hover:text-amber-300">Terms of Service</a> and <a href="#" class="text-amber-400 hover:text-amber-300">Privacy Policy</a></span>
+          </label>
+
+          <button type="submit" class="btn-primary w-full py-3.5 text-base" id="signup-submit">
+            Create Account
+          </button>
+        </form>
+      </div>
+
+      <p class="text-center text-gray-400 text-sm mt-6">
+        Already have an account?
+        <a href="login.html" class="text-amber-400 font-medium hover:text-amber-300 transition-colors">Sign in →</a>
+      </p>
+    </div>
+  </main>
+
+  <footer id="main-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/auth.js"></script>
+</body>
+</html>

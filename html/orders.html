@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order History — STRIDE</title>
+  <meta name="description" content="View your STRIDE order history and track current orders.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+
+  <nav id="main-nav"></nav>
+
+  <header class="page-header">
+    <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">My Account</p>
+    <h1 class="text-4xl sm:text-5xl font-bold text-white">Order History</h1>
+    <p class="text-gray-400 mt-3">Track and manage all your STRIDE orders</p>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="breadcrumb" id="breadcrumbs"></div>
+    <!-- Order Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+      <div class="glass-card p-5 text-center animate-fade-in-up stagger-1" id="stat-total">
+        <p class="text-2xl font-bold text-white">5</p>
+        <p class="text-gray-400 text-xs mt-1">Total Orders</p>
+      </div>
+      <div class="glass-card p-5 text-center animate-fade-in-up stagger-2" id="stat-delivered">
+        <p class="text-2xl font-bold text-green-400">2</p>
+        <p class="text-gray-400 text-xs mt-1">Delivered</p>
+      </div>
+      <div class="glass-card p-5 text-center animate-fade-in-up stagger-3" id="stat-active">
+        <p class="text-2xl font-bold text-amber-400">2</p>
+        <p class="text-gray-400 text-xs mt-1">In Progress</p>
+      </div>
+      <div class="glass-card p-5 text-center animate-fade-in-up stagger-4" id="stat-cancelled">
+        <p class="text-2xl font-bold text-red-400">1</p>
+        <p class="text-gray-400 text-xs mt-1">Cancelled</p>
+      </div>
+    </div>
+
+    <!-- Orders List -->
+    <div class="space-y-6" id="orders-list">
+      <!-- Rendered by JS -->
+    </div>
+  </main>
+
+  <footer id="main-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof setBreadcrumbs==='function') setBreadcrumbs([{label:'Account',href:'account.html'},{label:'Orders'}]);
+      const container = document.getElementById('orders-list');
+
+      if (DUMMY_ORDERS.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20">
+            <div class="text-6xl mb-4">📦</div>
+            <h3 class="text-xl font-semibold text-white mb-2">No orders yet</h3>
+            <p class="text-gray-400 mb-6">Start shopping to see your orders here!</p>
+            <a href="products.html" class="btn-primary">Shop Now</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = DUMMY_ORDERS.map((order, idx) => `
+        <div class="glass-card overflow-hidden animate-fade-in-up stagger-${Math.min(idx + 1, 5)}">
+          <!-- Order Header -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-white/[0.02] border-b border-white/5 gap-3">
+            <div class="flex flex-wrap items-center gap-4">
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Order ID</p>
+                <p class="font-mono text-amber-400 font-medium">${order.id}</p>
+              </div>
+              <div class="hidden sm:block w-px h-8 bg-white/10"></div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Date</p>
+                <p class="text-white text-sm">${order.date}</p>
+              </div>
+              <div class="hidden sm:block w-px h-8 bg-white/10"></div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
+                <p class="text-white font-semibold">${formatPrice(order.total)}</p>
+              </div>
+            </div>
+            <span class="status-badge ${order.status.toLowerCase()}">${order.status}</span>
+          </div>
+
+          <!-- Order Items -->
+          <div class="p-5">
+            ${order.items.map(item => `
+              <div class="flex items-center gap-4 py-3 border-b border-white/5 last:border-0">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
+                  <img src="${IMG_PATH}${item.image}" alt="${item.name}" class="w-full h-full object-contain p-2">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-white text-sm">${item.name}</p>
+                  <p class="text-gray-400 text-xs">Size ${item.size} · Qty: ${item.qty}</p>
+                </div>
+                <p class="font-semibold text-white text-sm">${formatPrice(item.price * item.qty)}</p>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Order Footer -->
+          <div class="p-5 bg-white/[0.02] border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="text-sm text-gray-400">
+              ${order.deliveryDate ? `<p>📦 ${order.status === 'Delivered' ? 'Delivered on' : 'Expected by'}: <span class="text-white">${order.deliveryDate}</span></p>` : '<p>—</p>'}
+            </div>
+            <div class="flex gap-2 text-sm">
+              <div class="flex justify-between text-xs gap-4 text-gray-400">
+                <span>Subtotal: ${formatPrice(order.subtotal)}</span>
+                <span>Shipping: ${order.shipping === 0 ? 'FREE' : formatPrice(order.shipping)}</span>
+                <span>Tax: ${formatPrice(order.tax)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    });
+  </script>
+</body>
+</html>

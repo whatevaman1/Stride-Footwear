@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop — STRIDE Premium Footwear</title>
+  <meta name="description" content="Browse our complete collection of premium men's, women's, and kids' footwear. Filter by category, brand, price, and rating.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+
+  <nav id="main-nav"></nav>
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">Our Collection</p>
+    <h1 class="text-4xl sm:text-5xl font-bold text-white">Shop All</h1>
+    <p class="text-gray-400 mt-3 max-w-md mx-auto">Discover premium footwear crafted for performance, style, and comfort.</p>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <!-- Breadcrumbs -->
+    <div class="breadcrumb" id="breadcrumbs"></div>
+
+    <!-- Top Bar: Category Pills + Search/Sort -->
+    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
+      <!-- Category Pills -->
+      <div class="flex flex-wrap gap-2" id="category-pills"></div>
+
+      <!-- Search, Sort, Filter Toggle -->
+      <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch">
+        <button onclick="toggleFilterSidebar()" class="filter-toggle-mobile">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          Filters
+        </button>
+        <div class="relative flex-1 lg:w-64">
+          <input type="text" id="product-search" class="form-input pl-10 py-2.5 text-sm" placeholder="Search products...">
+          <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+        <select id="product-sort" class="form-input py-2.5 text-sm bg-[#0f0f0f] w-full sm:w-auto cursor-pointer">
+          <option value="featured">Featured</option>
+          <option value="price-low">Price: Low → High</option>
+          <option value="price-high">Price: High → Low</option>
+          <option value="popularity">Popularity</option>
+          <option value="rating">Top Rated</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Product Count -->
+    <p class="text-gray-400 text-sm mb-6" id="product-count">0 products found</p>
+
+    <!-- Main Grid: Sidebar + Products -->
+    <div class="flex gap-8">
+      <!-- Filter Sidebar (Desktop: sticky, Mobile: off-canvas) -->
+      <div class="filter-backdrop" id="filter-backdrop" onclick="toggleFilterSidebar()"></div>
+      <aside class="filter-sidebar w-64 flex-shrink-0 hidden lg:block" id="filter-sidebar">
+        <!-- Rendered by JS -->
+      </aside>
+
+      <!-- Products Grid -->
+      <div class="flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" id="products-grid">
+          <!-- Skeleton → Products rendered by JS -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination-container"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Quick View Modal -->
+  <div class="modal-overlay" id="quick-view-modal"></div>
+
+  <footer id="main-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/products.js"></script>
+</body>
+</html>
