@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="strideApp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,66 +12,56 @@
   <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+<body class="bg-[#0f0f0f] text-gray-100 font-sans" ng-controller="AppController">
+  <div class="toast" ng-class="{'show': toast.visible, 'success': toast.type==='success', 'error': toast.type==='error'}" ng-if="toast.message"><span>{{toastIcons[toast.type] || 'ℹ️'}}</span><span ng-bind="toast.message"></span></div>
+  <nav id="main-nav" class="fixed top-0 w-full z-50 bg-[#0f0f0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex items-center justify-between h-16">
+      <a ng-href="{{paths.ROOT_PATH}}index.html" class="text-2xl font-extrabold gradient-text tracking-tight">STRIDE</a>
+    </div></div>
+  </nav>
 
-  <nav id="main-nav"></nav>
-
-  <main class="min-h-screen flex items-center justify-center px-4 pt-20 pb-12">
-    <div class="w-full max-w-lg text-center animate-fade-in-up" id="confirmation-content">
-      <!-- Confetti particles -->
-      <div class="relative inline-block mb-6" id="confetti-container">
+  <main class="min-h-screen flex items-center justify-center px-4 pt-20 pb-12" ng-controller="OrderConfirmationController">
+    <div class="w-full max-w-lg text-center animate-fade-in-up">
+      <!-- Confetti -->
+      <div class="relative inline-block mb-6">
         <div class="order-success-icon">✅</div>
+        <div ng-repeat="piece in confettiPieces" class="confetti-piece" ng-style="{'background': piece.background, 'left': piece.left, 'animation-delay': piece.animationDelay, 'animation-duration': piece.animationDuration}"></div>
       </div>
 
       <h1 class="text-3xl sm:text-4xl font-bold text-white mb-3">Order Confirmed! 🎉</h1>
       <p class="text-gray-400 mb-8">Thank you for shopping with STRIDE. Your order is being processed.</p>
 
-      <!-- Order Details Card -->
+      <!-- Order Details -->
       <div class="glass-card p-8 text-left mb-8 animate-fade-in-up stagger-2">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-lg font-bold text-white">Order Summary</h2>
           <span class="status-badge processing">Processing</span>
         </div>
-
         <div class="space-y-4 mb-6">
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Order ID</span>
-            <span class="text-amber-400 font-mono font-semibold" id="conf-order-id">ORD-2026-XXXX</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Date</span>
-            <span class="text-white" id="conf-date">—</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Estimated Delivery</span>
-            <span class="text-white" id="conf-delivery">—</span>
-          </div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Order ID</span><span class="text-amber-400 font-mono font-semibold" ng-bind="orderId"></span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Date</span><span class="text-white" ng-bind="orderDate"></span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Estimated Delivery</span><span class="text-white" ng-bind="deliveryDate"></span></div>
         </div>
-
         <div class="border-t border-white/5 pt-4 mb-4">
           <h3 class="text-sm font-semibold text-white mb-3">Items Ordered</h3>
-          <div class="space-y-3" id="conf-items">
-            <!-- Rendered by JS -->
+          <div class="space-y-3">
+            <div ng-repeat="item in items" class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
+                <img ng-src="{{paths.IMG_PATH}}{{item.image}}" alt="{{item.name}}" class="w-full h-full object-contain p-1.5">
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-white" ng-bind="item.name"></p>
+                <p class="text-xs text-gray-500">Size {{item.size}} · Qty: {{item.qty}}</p>
+              </div>
+              <p class="text-sm font-semibold text-white" ng-bind="formatPrice(item.price * item.qty)"></p>
+            </div>
           </div>
         </div>
-
         <div class="border-t border-white/5 pt-4 space-y-2">
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Subtotal</span>
-            <span class="text-white" id="conf-subtotal">₹0</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Shipping</span>
-            <span class="text-white" id="conf-shipping">FREE</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Tax</span>
-            <span class="text-white" id="conf-tax">₹0</span>
-          </div>
-          <div class="flex justify-between pt-2 border-t border-white/5">
-            <span class="font-semibold text-white">Total Paid</span>
-            <span class="font-bold text-xl text-amber-400" id="conf-total">₹0</span>
-          </div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Subtotal</span><span class="text-white" ng-bind="formatPrice(subtotal)"></span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Shipping</span><span class="text-white">{{shipping === 0 ? 'FREE' : formatPrice(shipping)}}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-gray-400">Tax</span><span class="text-white" ng-bind="formatPrice(tax)"></span></div>
+          <div class="flex justify-between pt-2 border-t border-white/5"><span class="font-semibold text-white">Total Paid</span><span class="font-bold text-xl text-amber-400" ng-bind="formatPrice(total)"></span></div>
         </div>
       </div>
 
@@ -80,92 +70,13 @@
         <a href="orders.html" class="btn-primary flex-1 py-3">📦 Track My Order</a>
         <a href="products.html" class="btn-secondary flex-1 py-3 text-center">🛍️ Continue Shopping</a>
       </div>
-
-      <!-- Email Notice -->
-      <p class="text-gray-500 text-xs mt-6 animate-fade-in-up stagger-4">
-        📧 A confirmation email has been sent to your registered email address.
-      </p>
+      <p class="text-gray-500 text-xs mt-6 animate-fade-in-up stagger-4">📧 A confirmation email has been sent to your registered email address.</p>
     </div>
   </main>
 
-  <footer id="main-footer"></footer>
-
+  <footer class="site-footer"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="border-t border-white/5 pt-6 text-center"><p class="text-gray-500 text-xs">&copy; 2026 STRIDE. All rights reserved.</p></div></div></footer>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
   <script src="../js/data.js"></script>
-  <script src="../js/app.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Get order data from sessionStorage (placed by payment.js)
-      const orderData = JSON.parse(sessionStorage.getItem('stride_last_order') || 'null');
-
-      // Generate order ID
-      const orderId = orderData?.orderId || `ORD-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-      const today = new Date();
-      const deliveryDate = new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000);
-
-      document.getElementById('conf-order-id').textContent = orderId;
-      document.getElementById('conf-date').textContent = today.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-      document.getElementById('conf-delivery').textContent = deliveryDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-
-      if (orderData && orderData.items) {
-        // Render ordered items
-        document.getElementById('conf-items').innerHTML = orderData.items.map(item => `
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
-              <img src="${IMG_PATH}${item.image}" alt="${item.name}" class="w-full h-full object-contain p-1.5">
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-white">${item.name}</p>
-              <p class="text-xs text-gray-500">Size ${item.size} · Qty: ${item.qty}</p>
-            </div>
-            <p class="text-sm font-semibold text-white">${formatPrice(item.price * item.qty)}</p>
-          </div>
-        `).join('');
-
-        const subtotal = orderData.items.reduce((s, i) => s + i.price * i.qty, 0);
-        const shipping = subtotal >= 8000 ? 0 : 499;
-        const tax = subtotal * 0.08;
-        const total = subtotal + shipping + tax;
-
-        document.getElementById('conf-subtotal').textContent = formatPrice(subtotal);
-        document.getElementById('conf-shipping').textContent = shipping === 0 ? 'FREE' : formatPrice(shipping);
-        document.getElementById('conf-tax').textContent = formatPrice(tax);
-        document.getElementById('conf-total').textContent = formatPrice(total);
-      } else {
-        // Fallback — show latest dummy order
-        const order = DUMMY_ORDERS[0];
-        document.getElementById('conf-order-id').textContent = order.id;
-        document.getElementById('conf-items').innerHTML = order.items.map(item => `
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
-              <img src="${IMG_PATH}${item.image}" alt="${item.name}" class="w-full h-full object-contain p-1.5">
-            </div>
-            <div class="flex-1"><p class="text-sm font-medium text-white">${item.name}</p><p class="text-xs text-gray-500">Size ${item.size} · Qty: ${item.qty}</p></div>
-            <p class="text-sm font-semibold text-white">${formatPrice(item.price * item.qty)}</p>
-          </div>
-        `).join('');
-        document.getElementById('conf-subtotal').textContent = formatPrice(order.subtotal);
-        document.getElementById('conf-shipping').textContent = order.shipping === 0 ? 'FREE' : formatPrice(order.shipping);
-        document.getElementById('conf-tax').textContent = formatPrice(order.tax);
-        document.getElementById('conf-total').textContent = formatPrice(order.total);
-      }
-
-      // Confetti animation
-      launchConfetti();
-    });
-
-    function launchConfetti() {
-      const container = document.getElementById('confetti-container');
-      const colors = ['#f59e0b', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#ec4899'];
-      for (let i = 0; i < 20; i++) {
-        const piece = document.createElement('div');
-        piece.className = 'confetti-piece';
-        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.left = Math.random() * 100 + '%';
-        piece.style.animationDelay = Math.random() * 0.5 + 's';
-        piece.style.animationDuration = (1 + Math.random()) + 's';
-        container.appendChild(piece);
-      }
-    }
-  </script>
+  <script src="../js/ng-app.js"></script>
 </body>
 </html>

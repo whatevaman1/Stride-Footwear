@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="strideApp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,20 +12,44 @@
   <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 font-sans">
-
-  <nav id="main-nav"></nav>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans" ng-controller="AppController">
+  <div class="toast" ng-class="{'show': toast.visible, 'success': toast.type==='success', 'error': toast.type==='error'}" ng-if="toast.message"><span>{{toastIcons[toast.type] || 'ℹ️'}}</span><span ng-bind="toast.message"></span></div>
+  <nav id="main-nav" class="fixed top-0 w-full z-50 bg-[#0f0f0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex items-center justify-between h-16">
+      <a ng-href="{{paths.ROOT_PATH}}index.html" class="text-2xl font-extrabold gradient-text tracking-tight">STRIDE</a>
+      <div class="hidden md:flex items-center space-x-1">
+        <a ng-href="{{paths.ROOT_PATH}}index.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Home</a>
+        <a ng-href="products.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Shop</a>
+      </div>
+      <div class="flex items-center space-x-2">
+        <a ng-href="cart.html" class="relative p-2 rounded-lg hover:bg-white/5 transition-all group"><svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span class="absolute -top-1 -right-1 badge" ng-show="cartCount > 0" ng-bind="cartCount"></span></a>
+      </div>
+    </div></div>
+  </nav>
 
   <header class="page-header">
     <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">Dashboard</p>
     <h1 class="text-4xl sm:text-5xl font-bold text-white">My Account</h1>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" id="account-content">
-    <div class="breadcrumb" id="breadcrumbs"></div>
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" ng-controller="AccountController">
+    <div class="breadcrumb"><a ng-href="{{paths.ROOT_PATH}}index.html">🏠 Home</a><span class="separator">›</span><span class="current">Account</span></div>
+
     <!-- Profile Card -->
-    <div class="glass-card p-8 mb-8 animate-fade-in-up" id="profile-card">
-      <!-- Rendered by JS below -->
+    <div class="glass-card p-8 mb-8 animate-fade-in-up" ng-if="user">
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-2xl font-bold text-black flex-shrink-0" ng-bind="getUserInitials()"></div>
+        <div class="flex-1 text-center sm:text-left">
+          <h2 class="text-2xl font-bold text-white" ng-bind="user.name"></h2>
+          <p class="text-gray-400 mt-1" ng-bind="user.email"></p>
+          <p class="text-gray-500 text-sm mt-1">📱 {{user.phone || 'Not set'}}</p>
+          <p class="text-gray-500 text-sm mt-1">📅 Member since {{user.joinDate}}</p>
+        </div>
+        <div class="flex gap-3">
+          <button ng-click="editProfile()" class="btn-secondary text-sm">Edit Profile</button>
+          <button ng-click="logout()" class="btn-danger text-sm">Logout</button>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Actions -->
@@ -47,80 +71,34 @@
       </a>
     </div>
 
-    <!-- Recent Orders Preview -->
-    <div class="glass-card p-6 animate-fade-in-up stagger-4">
+    <!-- Recent Orders -->
+    <div class="glass-card p-6 animate-fade-in-up stagger-4" ng-if="recentOrders.length > 0">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-lg font-bold text-white">Recent Orders</h2>
         <a href="orders.html" class="text-amber-400 text-sm hover:text-amber-300 transition-colors">View All →</a>
       </div>
-      <div class="overflow-x-auto" id="recent-orders-table">
-        <!-- Rendered by JS below -->
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead><tr><th>Order ID</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr ng-repeat="order in recentOrders">
+              <td class="font-mono text-sm text-amber-400" ng-bind="order.id"></td>
+              <td class="text-sm" ng-bind="order.date"></td>
+              <td class="text-sm">
+                <span ng-repeat="item in order.items" ng-bind="item.name"></span>
+              </td>
+              <td class="font-semibold" ng-bind="formatPrice(order.total)"></td>
+              <td><span class="status-badge" ng-class="order.status.toLowerCase()" ng-bind="order.status"></span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </main>
 
-  <footer id="main-footer"></footer>
-
+  <footer class="site-footer"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="border-t border-white/5 pt-6 text-center"><p class="text-gray-500 text-xs">&copy; 2026 STRIDE. All rights reserved.</p></div></div></footer>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
   <script src="../js/data.js"></script>
-  <script src="../js/app.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof setBreadcrumbs==='function') setBreadcrumbs([{label:'Account'}]);
-      const user = getUser();
-      if (!user) {
-        showToast('Please sign in to view your account', 'warning');
-        setTimeout(() => window.location.href = 'login.html', 1000);
-        return;
-      }
-
-      // Profile Card
-      const profileCard = document.getElementById('profile-card');
-      profileCard.innerHTML = `
-        <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-2xl font-bold text-black flex-shrink-0">
-            ${user.name.split(' ').map(n => n[0]).join('')}
-          </div>
-          <div class="flex-1 text-center sm:text-left">
-            <h2 class="text-2xl font-bold text-white">${user.name}</h2>
-            <p class="text-gray-400 mt-1">${user.email}</p>
-            <p class="text-gray-500 text-sm mt-1">📱 ${user.phone || 'Not set'}</p>
-            <p class="text-gray-500 text-sm mt-1">📅 Member since ${user.joinDate}</p>
-          </div>
-          <div class="flex gap-3">
-            <button onclick="showToast('Profile editor coming soon!', 'info')" class="btn-secondary text-sm">Edit Profile</button>
-            <button onclick="logout()" class="btn-danger text-sm">Logout</button>
-          </div>
-        </div>
-      `;
-
-      // Recent Orders
-      const table = document.getElementById('recent-orders-table');
-      const recentOrders = DUMMY_ORDERS.slice(0, 3);
-      table.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Date</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${recentOrders.map(order => `
-              <tr>
-                <td class="font-mono text-sm text-amber-400">${order.id}</td>
-                <td class="text-sm">${order.date}</td>
-                <td class="text-sm">${order.items.map(i => i.name).join(', ')}</td>
-                <td class="font-semibold">${formatPrice(order.total)}</td>
-                <td><span class="status-badge ${order.status.toLowerCase()}">${order.status}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    });
-  </script>
+  <script src="../js/ng-app.js"></script>
 </body>
 </html>

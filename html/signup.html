@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="strideApp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,100 +12,95 @@
   <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+<body class="bg-[#0f0f0f] text-gray-100 font-sans" ng-controller="AppController">
+  <div class="toast" ng-class="{'show': toast.visible, 'success': toast.type==='success', 'error': toast.type==='error'}" ng-if="toast.message"><span>{{toastIcons[toast.type] || 'ℹ️'}}</span><span ng-bind="toast.message"></span></div>
+  <nav id="main-nav" class="fixed top-0 w-full z-50 bg-[#0f0f0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex items-center justify-between h-16"><a ng-href="{{paths.ROOT_PATH}}index.html" class="text-2xl font-extrabold gradient-text tracking-tight">STRIDE</a></div></div>
+  </nav>
 
-  <nav id="main-nav"></nav>
-
-  <main class="min-h-screen flex items-center justify-center px-4 pt-20 pb-12">
+  <main class="min-h-screen flex items-center justify-center px-4 pt-20 pb-12" ng-controller="SignupController">
     <div class="w-full max-w-md animate-fade-in-up">
       <div class="text-center mb-8">
         <a href="../index.html" class="text-3xl font-extrabold gradient-text">STRIDE</a>
         <h1 class="text-2xl font-bold text-white mt-4">Create Your Account</h1>
         <p class="text-gray-400 mt-2">Join 50,000+ happy customers</p>
       </div>
-
       <div class="glass-card p-8">
-        <form id="signup-form" novalidate>
-          <!-- Full Name -->
+        <form ng-submit="submitSignup()" novalidate>
           <div class="mb-5">
-            <label for="signup-name" class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
             <div class="relative">
-              <input type="text" id="signup-name" class="form-input pl-11" placeholder="John Doe" required>
+              <input type="text" class="form-input pl-11" placeholder="John Doe" ng-model="signup.name"
+                     ng-focus="clearSignupError('name')" ng-blur="validateSignupField('name')"
+                     ng-class="{'error': signupErrors.name, 'success': signup.name && !signupErrors.name}">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">👤</span>
             </div>
-            <p class="error-message"></p>
+            <p class="error-message" ng-class="{'visible': signupErrors.name}" ng-bind="signupErrors.name"></p>
           </div>
-
-          <!-- Email -->
           <div class="mb-5">
-            <label for="signup-email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
             <div class="relative">
-              <input type="email" id="signup-email" class="form-input pl-11" placeholder="you@example.com" required>
+              <input type="email" class="form-input pl-11" placeholder="you@example.com" ng-model="signup.email"
+                     ng-focus="clearSignupError('email')" ng-blur="validateSignupField('email')"
+                     ng-class="{'error': signupErrors.email, 'success': signup.email && !signupErrors.email}">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📧</span>
             </div>
-            <p class="error-message"></p>
+            <p class="error-message" ng-class="{'visible': signupErrors.email}" ng-bind="signupErrors.email"></p>
           </div>
-
-          <!-- Phone -->
           <div class="mb-5">
-            <label for="signup-phone" class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
             <div class="relative">
-              <input type="tel" id="signup-phone" class="form-input pl-11" placeholder="+1 (555) 123-4567" required>
+              <input type="tel" class="form-input pl-11" placeholder="+91 98765 43210" ng-model="signup.phone"
+                     ng-focus="clearSignupError('phone')" ng-blur="validateSignupField('phone')"
+                     ng-class="{'error': signupErrors.phone, 'success': signup.phone && !signupErrors.phone}">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📱</span>
             </div>
-            <p class="error-message"></p>
+            <p class="error-message" ng-class="{'visible': signupErrors.phone}" ng-bind="signupErrors.phone"></p>
           </div>
-
-          <!-- Password -->
           <div class="mb-5">
-            <label for="signup-password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
             <div class="relative">
-              <input type="password" id="signup-password" class="form-input pl-11" placeholder="Min. 8 characters" required>
+              <input type="password" class="form-input pl-11" placeholder="Min. 8 characters" ng-model="signup.password"
+                     ng-focus="clearSignupError('password')" ng-blur="validateSignupField('password')"
+                     ng-change="updatePasswordStrength()"
+                     ng-class="{'error': signupErrors.password, 'success': signup.password && !signupErrors.password}">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
             </div>
-            <p class="error-message"></p>
-            <!-- Password Strength -->
+            <p class="error-message" ng-class="{'visible': signupErrors.password}" ng-bind="signupErrors.password"></p>
             <div class="mt-2">
               <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                <div id="password-strength" class="h-full rounded-full transition-all duration-300 bg-gray-700" style="width: 0%"></div>
+                <div class="h-full rounded-full transition-all duration-300" ng-class="passwordStrength.color" ng-style="{'width': passwordStrength.width}"></div>
               </div>
-              <p id="password-strength-text" class="text-xs mt-1"></p>
+              <p class="text-xs mt-1" ng-bind="passwordStrength.text" ng-class="passwordStrength.color.replace('bg-', 'text-')"></p>
             </div>
           </div>
-
-          <!-- Confirm Password -->
           <div class="mb-5">
-            <label for="signup-confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
             <div class="relative">
-              <input type="password" id="signup-confirm-password" class="form-input pl-11" placeholder="Repeat password" required>
+              <input type="password" class="form-input pl-11" placeholder="Repeat password" ng-model="signup.confirmPassword"
+                     ng-focus="clearSignupError('confirmPassword')" ng-blur="validateSignupField('confirmPassword')"
+                     ng-class="{'error': signupErrors.confirmPassword, 'success': signup.confirmPassword && !signupErrors.confirmPassword}">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
             </div>
-            <p class="error-message"></p>
+            <p class="error-message" ng-class="{'visible': signupErrors.confirmPassword}" ng-bind="signupErrors.confirmPassword"></p>
           </div>
-
-          <!-- Terms -->
           <label class="flex items-start gap-3 mb-6 cursor-pointer">
-            <input type="checkbox" class="custom-checkbox mt-0.5" required id="signup-terms">
+            <input type="checkbox" class="custom-checkbox mt-0.5" ng-model="signup.terms">
             <span class="text-sm text-gray-400">I agree to the <a href="#" class="text-amber-400 hover:text-amber-300">Terms of Service</a> and <a href="#" class="text-amber-400 hover:text-amber-300">Privacy Policy</a></span>
           </label>
-
-          <button type="submit" class="btn-primary w-full py-3.5 text-base" id="signup-submit">
-            Create Account
+          <button type="submit" class="btn-primary w-full py-3.5 text-base" ng-disabled="signupSubmitting">
+            <span ng-if="!signupSubmitting">Create Account</span>
+            <span ng-if="signupSubmitting">⏳ Creating account...</span>
           </button>
         </form>
       </div>
-
-      <p class="text-center text-gray-400 text-sm mt-6">
-        Already have an account?
-        <a href="login.html" class="text-amber-400 font-medium hover:text-amber-300 transition-colors">Sign in →</a>
-      </p>
+      <p class="text-center text-gray-400 text-sm mt-6">Already have an account? <a href="login.html" class="text-amber-400 font-medium hover:text-amber-300 transition-colors">Sign in →</a></p>
     </div>
   </main>
 
-  <footer id="main-footer"></footer>
-
+  <footer class="site-footer"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="border-t border-white/5 pt-6 text-center"><p class="text-gray-500 text-xs">&copy; 2026 STRIDE. All rights reserved.</p></div></div></footer>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
   <script src="../js/data.js"></script>
-  <script src="../js/app.js"></script>
-  <script src="../js/auth.js"></script>
+  <script src="../js/ng-app.js"></script>
 </body>
 </html>

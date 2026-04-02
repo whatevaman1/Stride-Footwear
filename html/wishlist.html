@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="strideApp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,9 +12,29 @@
   <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 font-sans">
-
-  <nav id="main-nav"></nav>
+<body class="bg-[#0f0f0f] text-gray-100 font-sans" ng-controller="AppController">
+  <div class="toast" ng-class="{'show': toast.visible, 'success': toast.type==='success', 'error': toast.type==='error'}" ng-if="toast.message">
+    <span>{{toastIcons[toast.type] || 'ℹ️'}}</span><span ng-bind="toast.message"></span>
+  </div>
+  <nav id="main-nav" class="fixed top-0 w-full z-50 bg-[#0f0f0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a ng-href="{{paths.ROOT_PATH}}index.html" class="text-2xl font-extrabold gradient-text tracking-tight">STRIDE</a>
+        <div class="hidden md:flex items-center space-x-1">
+          <a ng-href="{{paths.ROOT_PATH}}index.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Home</a>
+          <a ng-href="products.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Shop</a>
+          <a ng-href="about.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">About</a>
+          <a ng-href="reviews.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Reviews</a>
+          <a ng-href="contact.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Contact</a>
+        </div>
+        <div class="flex items-center space-x-2">
+          <a ng-href="wishlist.html" class="relative p-2 rounded-lg hover:bg-white/5 transition-all group text-amber-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg><span class="absolute -top-1 -right-1 badge bg-red-500 text-white" ng-show="wishCount > 0" ng-bind="wishCount"></span></a>
+          <a ng-href="cart.html" class="relative p-2 rounded-lg hover:bg-white/5 transition-all group"><svg class="w-5 h-5 text-gray-300 group-hover:text-amber-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span class="absolute -top-1 -right-1 badge" ng-show="cartCount > 0" ng-bind="cartCount"></span></a>
+          <a ng-if="!user" ng-href="login.html" class="btn-primary text-sm px-5 py-2">Sign In</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <header class="page-header">
     <p class="text-amber-400 font-semibold text-sm uppercase tracking-[0.2em] mb-2">Your Favorites</p>
@@ -22,83 +42,58 @@
     <p class="text-gray-400 mt-3">Items you've saved for later</p>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-    <div class="breadcrumb" id="breadcrumbs"></div>
-    <div id="wishlist-content"></div>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" ng-controller="WishlistController">
+    <div class="breadcrumb">
+      <a ng-href="{{paths.ROOT_PATH}}index.html">🏠 Home</a><span class="separator">›</span><span class="current">Wishlist</span>
+    </div>
+
+    <!-- Empty Wishlist -->
+    <div ng-if="wishlistProducts.length === 0" class="text-center py-20 animate-fade-in">
+      <div class="text-6xl mb-4">💔</div>
+      <h3 class="text-xl font-semibold text-white mb-2">Your wishlist is empty</h3>
+      <p class="text-gray-400 mb-6">Browse our collection and heart the items you love!</p>
+      <a href="products.html" class="btn-primary px-8 py-3">🛍️ Start Shopping</a>
+    </div>
+
+    <!-- Wishlist Items -->
+    <div ng-if="wishlistProducts.length > 0">
+      <div class="flex justify-between items-center mb-6">
+        <p class="text-gray-400 text-sm">{{wishlistProducts.length}} item{{wishlistProducts.length !== 1 ? 's' : ''}} in wishlist</p>
+        <button ng-click="clearWishlist()" class="btn-danger text-xs px-4 py-2">Clear All</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div ng-repeat="product in wishlistProducts" class="product-card animate-fade-in-up" ng-style="{'animation-delay': ($index * 0.08) + 's'}">
+          <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
+            <div ng-if="product.badge" class="product-badge">{{product.badge | uppercase}}</div>
+            <button class="wishlist-btn active" ng-click="removeFromWishlist(product.id, $event)">❤️</button>
+            <img ng-src="{{paths.IMG_PATH}}{{product.image}}" alt="{{product.name}}" class="w-full h-full object-contain p-6" loading="lazy">
+            <div class="zoom-lens"><span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span></div>
+          </div>
+          <div class="p-5" ng-click="openQuickView(product.id)">
+            <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider" ng-bind="product.subcategory"></p>
+            <h3 class="font-semibold text-white mt-1" ng-bind="product.name"></h3>
+            <p class="text-xs text-gray-500" ng-bind="product.brand"></p>
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+              <div class="flex items-baseline gap-2">
+                <span class="text-lg font-bold text-white" ng-bind="formatPrice(product.price)"></span>
+                <span ng-if="product.originalPrice" class="text-sm text-gray-500 line-through" ng-bind="formatPrice(product.originalPrice)"></span>
+              </div>
+              <button ng-click="addToCartFromWishlist(product, $event)" class="btn-primary text-xs px-3 py-1.5">🛒 Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <div class="modal-overlay" id="quick-view-modal"></div>
-  <footer id="main-footer"></footer>
+  <footer class="site-footer">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="border-t border-white/5 pt-6 text-center"><p class="text-gray-500 text-xs">&copy; 2026 STRIDE. All rights reserved.</p></div>
+    </div>
+  </footer>
 
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
   <script src="../js/data.js"></script>
-  <script src="../js/app.js"></script>
-  <script src="../js/products.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof setBreadcrumbs === 'function') setBreadcrumbs([{ label: 'Wishlist' }]);
-      renderWishlistPage();
-    });
-
-    function renderWishlistPage() {
-      const container = document.getElementById('wishlist-content');
-      const wishlist = getWishlist();
-      const products = PRODUCTS.filter(p => wishlist.includes(p.id));
-
-      if (products.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-20 animate-fade-in">
-            <div class="text-6xl mb-4">💔</div>
-            <h3 class="text-xl font-semibold text-white mb-2">Your wishlist is empty</h3>
-            <p class="text-gray-400 mb-6">Browse our collection and heart the items you love!</p>
-            <a href="products.html" class="btn-primary px-8 py-3">🛍️ Start Shopping</a>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-          <p class="text-gray-400 text-sm">${products.length} item${products.length !== 1 ? 's' : ''} in wishlist</p>
-          <button onclick="clearWishlist()" class="btn-danger text-xs px-4 py-2">Clear All</button>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          ${products.map((product, i) => `
-            <div class="product-card animate-fade-in-up" style="animation-delay: ${i * 0.08}s">
-              <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
-                ${product.badge ? `<div class="product-badge">${product.badge.toUpperCase()}</div>` : ''}
-                <button class="wishlist-btn active" data-id="${product.id}" onclick="event.stopPropagation(); removeAndRefresh(${product.id})">❤️</button>
-                <img src="${IMG_PATH}${product.image}" alt="${product.name}" class="w-full h-full object-contain p-6" loading="lazy">
-                <div class="zoom-lens"><span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span></div>
-              </div>
-              <div class="p-5" onclick="openQuickView(${product.id})">
-                <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider">${product.subcategory}</p>
-                <h3 class="font-semibold text-white mt-1">${product.name}</h3>
-                <p class="text-xs text-gray-500">${product.brand}</p>
-                <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                  <div class="flex items-baseline gap-2">
-                    <span class="text-lg font-bold text-white">${formatPrice(product.price)}</span>
-                    ${product.originalPrice ? `<span class="text-sm text-gray-500 line-through">${formatPrice(product.originalPrice)}</span>` : ''}
-                  </div>
-                  <button onclick="event.stopPropagation(); addToCart(${product.id}, ${product.sizes[0]})" class="btn-primary text-xs px-3 py-1.5">🛒 Add</button>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }
-
-    function removeAndRefresh(productId) {
-      toggleWishlist(productId);
-      setTimeout(renderWishlistPage, 100);
-    }
-
-    function clearWishlist() {
-      localStorage.removeItem('stride_wishlist');
-      updateWishBadge();
-      renderWishlistPage();
-      showToast('Wishlist cleared', 'info');
-    }
-  </script>
+  <script src="../js/ng-app.js"></script>
 </body>
 </html>

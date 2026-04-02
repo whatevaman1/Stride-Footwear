@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="strideApp">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,9 +12,59 @@
   <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="bg-[#0f0f0f] text-gray-100 font-sans">
+<body class="bg-[#0f0f0f] text-gray-100 font-sans" ng-controller="AppController">
 
-  <nav id="main-nav"></nav>
+  <!-- Toast -->
+  <div class="toast" ng-class="{'show': toast.visible, 'success': toast.type==='success', 'error': toast.type==='error'}" ng-if="toast.message">
+    <span>{{toastIcons[toast.type] || 'ℹ️'}}</span><span ng-bind="toast.message"></span>
+  </div>
+
+  <!-- Nav (reused from AppController) -->
+  <nav id="main-nav" class="fixed top-0 w-full z-50 bg-[#0f0f0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a ng-href="{{paths.ROOT_PATH}}index.html" class="text-2xl font-extrabold gradient-text tracking-tight">STRIDE</a>
+        <div class="hidden md:flex items-center space-x-1">
+          <a ng-href="{{paths.ROOT_PATH}}index.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Home</a>
+          <a ng-href="products.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-amber-400 bg-white/5 transition-all">Shop</a>
+          <div class="relative group">
+            <button class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all flex items-center gap-1">Categories
+              <svg class="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div class="absolute top-full left-0 mt-1 w-48 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 overflow-hidden">
+              <a ng-repeat="cat in categoryLinks" ng-href="{{cat.href}}" class="block px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-amber-400 transition-all">{{cat.label}}</a>
+            </div>
+          </div>
+          <a ng-href="about.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">About</a>
+          <a ng-href="reviews.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Reviews</a>
+          <a ng-href="contact.html" class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all">Contact</a>
+        </div>
+        <div class="flex items-center space-x-2">
+          <a ng-href="wishlist.html" class="relative p-2 rounded-lg hover:bg-white/5 transition-all group" title="Wishlist">
+            <svg class="w-5 h-5 text-gray-300 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            <span class="absolute -top-1 -right-1 badge bg-red-500 text-white" ng-show="wishCount > 0" ng-bind="wishCount"></span>
+          </a>
+          <a ng-href="cart.html" class="relative p-2 rounded-lg hover:bg-white/5 transition-all group" title="Cart">
+            <svg class="w-5 h-5 text-gray-300 group-hover:text-amber-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span class="absolute -top-1 -right-1 badge" ng-show="cartCount > 0" ng-bind="cartCount"></span>
+          </a>
+          <a ng-if="user" ng-href="account.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-all group">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-xs font-bold text-black" ng-bind="getUserInitials()"></div>
+          </a>
+          <a ng-if="!user" ng-href="login.html" class="btn-primary text-sm px-5 py-2">Sign In</a>
+          <button class="md:hidden p-2 rounded-lg hover:bg-white/5 transition-all" ng-click="toggleMobileMenu()">
+            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-overlay" ng-class="{'open': mobileMenuOpen}" ng-click="toggleMobileMenu()"></div>
+    <div class="mobile-menu" ng-class="{'open': mobileMenuOpen}">
+      <div class="flex flex-col space-y-2">
+        <a ng-repeat="link in mobileLinks" ng-href="{{link.href}}" class="px-4 py-3 rounded-lg text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all" ng-class="{'pl-8': link.indent}">{{link.label}}</a>
+      </div>
+    </div>
+  </nav>
 
   <!-- Page Header -->
   <header class="page-header">
@@ -23,26 +73,39 @@
     <p class="text-gray-400 mt-3 max-w-md mx-auto">Discover premium footwear crafted for performance, style, and comfort.</p>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" ng-controller="ProductsController">
     <!-- Breadcrumbs -->
-    <div class="breadcrumb" id="breadcrumbs"></div>
+    <div class="breadcrumb">
+      <a ng-href="{{paths.ROOT_PATH}}index.html">🏠 Home</a>
+      <span ng-repeat="crumb in breadcrumbs" class="flex items-center gap-2">
+        <span class="separator">›</span>
+        <a ng-if="crumb.href && !$last" ng-href="{{crumb.href}}" ng-bind="crumb.label"></a>
+        <span ng-if="!crumb.href || $last" class="current" ng-bind="crumb.label"></span>
+      </span>
+    </div>
 
     <!-- Top Bar: Category Pills + Search/Sort -->
     <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
       <!-- Category Pills -->
-      <div class="flex flex-wrap gap-2" id="category-pills"></div>
+      <div class="flex flex-wrap gap-2" id="category-pills">
+        <button ng-repeat="pill in categoryPills" ng-click="setCategory(pill.key)"
+                class="category-pill" ng-class="{'active': filters.category === pill.key && filters.styleFilter === 'all'}">{{pill.label}}</button>
+        <button ng-click="setStyleFilter('traditional')" class="category-pill" ng-class="{'active': filters.styleFilter === 'traditional'}">🇮🇳 Indian</button>
+      </div>
 
       <!-- Search, Sort, Filter Toggle -->
       <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch">
-        <button onclick="toggleFilterSidebar()" class="filter-toggle-mobile">
+        <button ng-click="toggleFilterSidebar()" class="filter-toggle-mobile">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
           Filters
         </button>
         <div class="relative flex-1 lg:w-64">
-          <input type="text" id="product-search" class="form-input pl-10 py-2.5 text-sm" placeholder="Search products...">
+          <input type="text" id="product-search" class="form-input pl-10 py-2.5 text-sm" placeholder="Search products..."
+                 ng-model="filters.search">
           <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
-        <select id="product-sort" class="form-input py-2.5 text-sm bg-[#0f0f0f] w-full sm:w-auto cursor-pointer">
+        <select id="product-sort" class="form-input py-2.5 text-sm bg-[#0f0f0f] w-full sm:w-auto cursor-pointer"
+                ng-model="filters.sort">
           <option value="featured">Featured</option>
           <option value="price-low">Price: Low → High</option>
           <option value="price-high">Price: High → Low</option>
@@ -54,35 +117,220 @@
     </div>
 
     <!-- Product Count -->
-    <p class="text-gray-400 text-sm mb-6" id="product-count">0 products found</p>
+    <p class="text-gray-400 text-sm mb-6" id="product-count">{{filteredProducts.length}} product{{filteredProducts.length !== 1 ? 's' : ''}} found</p>
 
     <!-- Main Grid: Sidebar + Products -->
     <div class="flex gap-8">
-      <!-- Filter Sidebar (Desktop: sticky, Mobile: off-canvas) -->
-      <div class="filter-backdrop" id="filter-backdrop" onclick="toggleFilterSidebar()"></div>
-      <aside class="filter-sidebar w-64 flex-shrink-0 hidden lg:block" id="filter-sidebar">
-        <!-- Rendered by JS -->
+      <!-- Filter Backdrop (Mobile) -->
+      <div class="filter-backdrop" ng-class="{'open': filterSidebarOpen}" ng-click="toggleFilterSidebar()"></div>
+
+      <!-- Filter Sidebar -->
+      <aside class="filter-sidebar w-64 flex-shrink-0 hidden lg:block" ng-class="{'open': filterSidebarOpen}" id="filter-sidebar" price-range-slider>
+        <div class="flex justify-between items-center mb-6 lg:hidden">
+          <h2 class="text-lg font-bold text-white">Filters</h2>
+          <button ng-click="toggleFilterSidebar()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+        </div>
+
+        <!-- Price Range -->
+        <div class="filter-section">
+          <h3>💰 Price Range</h3>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-400">₹{{filters.priceMin}}</span>
+            <span class="text-gray-400">₹{{filters.priceMax}}</span>
+          </div>
+          <div class="range-slider-container">
+            <div class="range-track">
+              <div class="range-fill" id="range-fill"></div>
+            </div>
+            <input type="range" class="range-min" ng-attr-min="{{priceMin}}" ng-attr-max="{{priceMax}}" ng-model="filters.priceMin">
+            <input type="range" class="range-max" ng-attr-min="{{priceMin}}" ng-attr-max="{{priceMax}}" ng-model="filters.priceMax">
+          </div>
+        </div>
+
+        <!-- Brand -->
+        <div class="filter-section">
+          <h3>🏷️ Brand</h3>
+          <div class="space-y-1">
+            <label ng-repeat="brand in brands" class="filter-checkbox">
+              <input type="checkbox" ng-model="filters.brands[brand]">
+              <span class="check-box"></span>
+              <span class="flex-1" ng-bind="brand"></span>
+              <span class="text-xs text-gray-500">({{getBrandCount(brand)}})</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Rating -->
+        <div class="filter-section">
+          <h3>⭐ Minimum Rating</h3>
+          <div class="space-y-1">
+            <div ng-repeat="rating in ratingOptions" class="star-filter-row" ng-class="{'active': filters.minRating === rating}" ng-click="setRatingFilter(rating)">
+              <stride-stars rating="rating"></stride-stars>
+              <span class="text-xs ml-1">{{rating}}+</span>
+            </div>
+            <div class="star-filter-row" ng-class="{'active': filters.minRating === 0}" ng-click="setRatingFilter(0)">
+              <span class="text-sm">All Ratings</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clear Filters -->
+        <button ng-if="getActiveFilterCount() > 0" class="clear-filters-btn" ng-click="clearAllFilters()">✕ Clear All Filters ({{getActiveFilterCount()}})</button>
       </aside>
 
       <!-- Products Grid -->
       <div class="flex-1">
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" id="products-grid">
-          <!-- Skeleton → Products rendered by JS -->
+        <!-- Skeleton Loading -->
+        <div ng-if="loading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div ng-repeat="i in [1,2,3,4,5,6,7,8]" class="skeleton-card">
+            <div class="skel-img skeleton"></div>
+            <div class="skel-line short skeleton"></div>
+            <div class="skel-line medium skeleton"></div>
+            <div class="skel-line skeleton" style="width:55%"></div>
+            <div class="skel-btn skeleton"></div>
+          </div>
+        </div>
+
+        <!-- Products -->
+        <div ng-if="!loading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" id="products-grid">
+          <!-- No Products -->
+          <div ng-if="paginatedProducts.length === 0" class="col-span-full text-center py-20 animate-fade-in">
+            <div class="text-6xl mb-4">🔍</div>
+            <h3 class="text-xl font-semibold text-white mb-2">No products found</h3>
+            <p class="text-gray-400 mb-6">Try adjusting your filters or search terms.</p>
+            <button ng-click="clearAllFilters()" class="btn-primary px-6 py-2.5">Clear Filters</button>
+          </div>
+
+          <!-- Product Cards -->
+          <div ng-repeat="product in paginatedProducts" class="product-card animate-fade-in-up" ng-style="{'animation-delay': ($index < 9 ? $index * 0.05 : 0.4) + 's'}">
+            <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
+              <div ng-if="product.badge" class="product-badge">{{product.badge | uppercase}}</div>
+              <button class="wishlist-btn" ng-class="{'active': isInWishlist(product.id)}" ng-click="toggleWishlist(product.id, $event)">
+                {{isInWishlist(product.id) ? '❤️' : '🤍'}}
+              </button>
+              <img ng-src="{{paths.IMG_PATH}}{{product.image}}" alt="{{product.name}}" class="w-full h-full object-contain p-6" loading="lazy">
+              <div class="zoom-lens"><span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span></div>
+              <div class="overlay"></div>
+            </div>
+            <div class="p-5" ng-click="openQuickView(product.id)">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider" ng-bind="product.subcategory"></p>
+                <div class="flex items-center gap-1">
+                  <span class="star filled text-xs">★</span>
+                  <span class="text-xs text-gray-400" ng-bind="product.rating"></span>
+                </div>
+              </div>
+              <h3 class="font-semibold text-white" ng-bind="product.name"></h3>
+              <p class="text-xs text-gray-500 mt-1" ng-bind="product.brand"></p>
+              <p class="text-gray-400 text-xs mt-2 line-clamp-2 leading-relaxed" ng-bind="product.description"></p>
+              <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                <div class="flex items-baseline gap-2">
+                  <span class="text-lg font-bold text-white" ng-bind="formatPrice(product.price)"></span>
+                  <span ng-if="product.originalPrice" class="text-sm text-gray-500 line-through" ng-bind="formatPrice(product.originalPrice)"></span>
+                  <span ng-if="getDiscount(product) > 0" class="text-xs text-green-400 font-semibold">{{getDiscount(product)}}% OFF</span>
+                </div>
+                <button ng-click="quickAddToCart(product.id); $event.stopPropagation()" class="btn-secondary text-xs px-3 py-1.5">+ Add</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Pagination -->
-        <div id="pagination-container"></div>
+        <div ng-if="totalPages > 1" id="pagination-container">
+          <div class="text-center text-sm text-gray-400 mb-4">
+            Showing {{paginatedProducts.length}} of {{filteredProducts.length}} products
+          </div>
+          <div class="pagination">
+            <button class="page-btn" ng-disabled="currentPage <= 1" ng-click="goToPage(currentPage - 1)">←</button>
+            <button ng-repeat="page in getPages()" class="page-btn" ng-class="{'active': page === currentPage}" ng-click="goToPage(page)">{{page}}</button>
+            <button class="page-btn" ng-disabled="currentPage >= totalPages" ng-click="goToPage(currentPage + 1)">→</button>
+          </div>
+          <button ng-if="currentPage < totalPages" class="load-more-btn" ng-click="loadMore()">Load More Products ↓</button>
+        </div>
       </div>
     </div>
   </main>
 
   <!-- Quick View Modal -->
-  <div class="modal-overlay" id="quick-view-modal"></div>
+  <div class="modal-overlay" ng-class="{'active': quickViewProduct}" ng-click="closeQuickView()">
+    <div class="modal-content max-w-lg" ng-if="quickViewProduct" ng-click="$event.stopPropagation()">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <p class="text-amber-400 text-xs font-semibold uppercase tracking-wider" ng-bind="quickViewProduct.subcategory"></p>
+          <h2 class="text-xl font-bold text-white mt-1" ng-bind="quickViewProduct.name"></h2>
+          <p class="text-sm text-gray-500" ng-bind="quickViewProduct.brand"></p>
+        </div>
+        <button ng-click="closeQuickView()" class="text-gray-400 hover:text-white text-xl transition-colors">&times;</button>
+      </div>
+      <div class="relative h-64 rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 mb-4 overflow-hidden group">
+        <img ng-src="{{paths.IMG_PATH}}{{quickViewProduct.image}}" alt="{{quickViewProduct.name}}" class="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-110">
+      </div>
+      <p class="text-gray-400 text-sm leading-relaxed mb-4" ng-bind="quickViewProduct.description"></p>
+      <div class="flex items-center gap-2 mb-4">
+        <stride-stars rating="quickViewProduct.rating"></stride-stars>
+        <span class="text-sm text-gray-400">({{quickViewProduct.reviewCount}} reviews)</span>
+      </div>
+      <div class="flex items-baseline gap-3 mb-5">
+        <span class="text-2xl font-bold text-white" ng-bind="formatPrice(quickViewProduct.price)"></span>
+        <span ng-if="quickViewProduct.originalPrice" class="text-base text-gray-500 line-through" ng-bind="formatPrice(quickViewProduct.originalPrice)"></span>
+        <span ng-if="getDiscount(quickViewProduct) > 0" class="text-sm text-green-400 font-semibold">{{getDiscount(quickViewProduct)}}% OFF</span>
+      </div>
+      <div class="mb-5">
+        <p class="text-sm font-medium text-white mb-2">Size</p>
+        <div class="flex flex-wrap gap-2">
+          <button ng-repeat="size in quickViewProduct.sizes" ng-click="selectSize(size)"
+                  class="w-11 h-11 rounded-lg border text-sm font-medium transition-all"
+                  ng-class="{'border-amber-500 text-amber-400 bg-amber-500/10': selectedSize === size, 'border-white/10 text-gray-400 hover:border-white/30': selectedSize !== size}">{{size}}</button>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button ng-click="addToCartFromQuickView()" class="btn-primary flex-1 py-3">
+          🛒 Add to Cart — {{formatPrice(quickViewProduct.price)}}
+        </button>
+        <button ng-click="toggleWishlist(quickViewProduct.id)" class="btn-secondary px-4 py-3" ng-class="{'text-red-400': isInWishlist(quickViewProduct.id)}">
+          {{isInWishlist(quickViewProduct.id) ? '❤️' : '🤍'}}
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <footer id="main-footer"></footer>
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+        <div>
+          <h3 class="text-2xl font-extrabold gradient-text mb-4">STRIDE</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Premium footwear for every step of your journey.</p>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Shop</h4>
+          <ul class="space-y-2 text-sm">
+            <li ng-repeat="link in shopLinks"><a ng-href="{{link.href}}" class="text-gray-400 hover:text-amber-400 transition-colors" ng-bind="link.label"></a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Support</h4>
+          <ul class="space-y-2 text-sm">
+            <li ng-repeat="link in supportLinks"><a ng-href="{{link.href}}" class="text-gray-400 hover:text-amber-400 transition-colors" ng-bind="link.label"></a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Newsletter</h4>
+          <p class="text-gray-400 text-sm mb-3">Get 10% off your first order</p>
+          <form ng-submit="subscribeNewsletter()" class="flex gap-2">
+            <input type="email" ng-model="newsletterEmail" placeholder="your@email.com" class="form-input text-sm flex-1 py-2.5">
+            <button type="submit" class="btn-primary text-sm px-4 py-2.5">→</button>
+          </form>
+        </div>
+      </div>
+      <div class="border-t border-white/5 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <p class="text-gray-500 text-xs">&copy; 2026 STRIDE. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
 
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
   <script src="../js/data.js"></script>
-  <script src="../js/app.js"></script>
-  <script src="../js/products.js"></script>
+  <script src="../js/ng-app.js"></script>
 </body>
 </html>
