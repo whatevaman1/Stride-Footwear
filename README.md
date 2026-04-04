@@ -26,3 +26,7 @@ Stride Footwear is a premium e-commerce web application designed to bring an aut
 ## How to Run Locally
 
 You can run this project simply by serving the root directory using a local web server (like VS Code Live Server or python's `http.server`) and opening `index.html` in your browser.
+
+To run the server:
+first run seed.js
+then run index.js

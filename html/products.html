@@ -125,27 +125,12 @@
       <div class="filter-backdrop" ng-class="{'open': filterSidebarOpen}" ng-click="toggleFilterSidebar()"></div>
 
       <!-- Filter Sidebar -->
-      <aside class="filter-sidebar w-64 flex-shrink-0 hidden lg:block" ng-class="{'open': filterSidebarOpen}" id="filter-sidebar" price-range-slider>
+      <aside class="filter-sidebar w-64 flex-shrink-0 hidden lg:block" ng-class="{'open': filterSidebarOpen}" id="filter-sidebar">
         <div class="flex justify-between items-center mb-6 lg:hidden">
           <h2 class="text-lg font-bold text-white">Filters</h2>
           <button ng-click="toggleFilterSidebar()" class="text-gray-400 hover:text-white text-xl">&times;</button>
         </div>
 
-        <!-- Price Range -->
-        <div class="filter-section">
-          <h3>💰 Price Range</h3>
-          <div class="flex justify-between text-sm mb-2">
-            <span class="text-gray-400">₹{{filters.priceMin}}</span>
-            <span class="text-gray-400">₹{{filters.priceMax}}</span>
-          </div>
-          <div class="range-slider-container">
-            <div class="range-track">
-              <div class="range-fill" id="range-fill"></div>
-            </div>
-            <input type="range" class="range-min" ng-attr-min="{{priceMin}}" ng-attr-max="{{priceMax}}" ng-model="filters.priceMin">
-            <input type="range" class="range-max" ng-attr-min="{{priceMin}}" ng-attr-max="{{priceMax}}" ng-model="filters.priceMax">
-          </div>
-        </div>
 
         <!-- Brand -->
         <div class="filter-section">
@@ -179,7 +164,7 @@
       </aside>
 
       <!-- Products Grid -->
-      <div class="flex-1">
+      <div class="flex-1 min-w-0">
         <!-- Skeleton Loading -->
         <div ng-if="loading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           <div ng-repeat="i in [1,2,3,4,5,6,7,8]" class="skeleton-card">
@@ -203,16 +188,16 @@
 
           <!-- Product Cards -->
           <div ng-repeat="product in paginatedProducts" class="product-card animate-fade-in-up" ng-style="{'animation-delay': ($index < 9 ? $index * 0.05 : 0.4) + 's'}">
-            <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
+            <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800 cursor-pointer" ng-click="goToProductDetail(product.id)">
               <div ng-if="product.badge" class="product-badge">{{product.badge | uppercase}}</div>
               <button class="wishlist-btn" ng-class="{'active': isInWishlist(product.id)}" ng-click="toggleWishlist(product.id, $event)">
                 {{isInWishlist(product.id) ? '❤️' : '🤍'}}
               </button>
-              <img ng-src="{{paths.IMG_PATH}}{{product.image}}" alt="{{product.name}}" class="w-full h-full object-contain p-6" loading="lazy">
-              <div class="zoom-lens"><span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span></div>
+              <img ng-src="{{product.image}}" alt="{{product.name}}" class="w-full h-full object-contain p-6" loading="lazy">
+              <div class="zoom-lens" ng-click="openQuickView(product.id); $event.stopPropagation()"><span class="text-white/50 text-xs font-medium tracking-wider cursor-pointer hover:text-white">QUICK VIEW</span></div>
               <div class="overlay"></div>
             </div>
-            <div class="p-5" ng-click="openQuickView(product.id)">
+            <div class="p-5 cursor-pointer" ng-click="goToProductDetail(product.id)">
               <div class="flex items-center justify-between mb-1">
                 <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider" ng-bind="product.subcategory"></p>
                 <div class="flex items-center gap-1">
@@ -235,18 +220,7 @@
           </div>
         </div>
 
-        <!-- Pagination -->
-        <div ng-if="totalPages > 1" id="pagination-container">
-          <div class="text-center text-sm text-gray-400 mb-4">
-            Showing {{paginatedProducts.length}} of {{filteredProducts.length}} products
-          </div>
-          <div class="pagination">
-            <button class="page-btn" ng-disabled="currentPage <= 1" ng-click="goToPage(currentPage - 1)">←</button>
-            <button ng-repeat="page in getPages()" class="page-btn" ng-class="{'active': page === currentPage}" ng-click="goToPage(page)">{{page}}</button>
-            <button class="page-btn" ng-disabled="currentPage >= totalPages" ng-click="goToPage(currentPage + 1)">→</button>
-          </div>
-          <button ng-if="currentPage < totalPages" class="load-more-btn" ng-click="loadMore()">Load More Products ↓</button>
-        </div>
+
       </div>
     </div>
   </main>
@@ -263,7 +237,7 @@
         <button ng-click="closeQuickView()" class="text-gray-400 hover:text-white text-xl transition-colors">&times;</button>
       </div>
       <div class="relative h-64 rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 mb-4 overflow-hidden group">
-        <img ng-src="{{paths.IMG_PATH}}{{quickViewProduct.image}}" alt="{{quickViewProduct.name}}" class="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-110">
+        <img ng-src="{{quickViewProduct.image}}" alt="{{quickViewProduct.name}}" class="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-110">
       </div>
       <p class="text-gray-400 text-sm leading-relaxed mb-4" ng-bind="quickViewProduct.description"></p>
       <div class="flex items-center gap-2 mb-4">

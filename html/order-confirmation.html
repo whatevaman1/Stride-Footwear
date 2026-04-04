@@ -47,7 +47,7 @@
           <div class="space-y-3">
             <div ng-repeat="item in items" class="flex items-center gap-3">
               <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
-                <img ng-src="{{paths.IMG_PATH}}{{item.image}}" alt="{{item.name}}" class="w-full h-full object-contain p-1.5">
+                <img ng-src="{{item.image}}" alt="{{item.name}}" class="w-full h-full object-contain p-1.5">
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-white" ng-bind="item.name"></p>

@@ -351,19 +351,19 @@ function renderProducts() {
       : 0;
 
     return `
-      <div class="product-card animate-fade-in-up" style="animation-delay: ${Math.min(i * 0.05, 0.4)}s">
+      <div class="product-card animate-fade-in-up" onclick="window.location.href='product-detail.html?id=${product.id}'" style="cursor: pointer; animation-delay: ${Math.min(i * 0.05, 0.4)}s">
         <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
           ${product.badge ? `<div class="product-badge">${product.badge.toUpperCase()}</div>` : ''}
           <button class="wishlist-btn ${wishlisted ? 'active' : ''}" data-id="${product.id}" onclick="event.stopPropagation(); toggleWishlist(${product.id})">
             ${wishlisted ? '❤️' : '🤍'}
           </button>
           <img src="${IMG_PATH}${product.image}" alt="${product.name}" class="w-full h-full object-contain p-6" loading="lazy">
-          <div class="zoom-lens">
+          <div class="zoom-lens" onclick="event.stopPropagation(); openQuickView(${product.id})">
             <span class="text-white/50 text-xs font-medium tracking-wider">QUICK VIEW</span>
           </div>
           <div class="overlay"></div>
         </div>
-        <div class="p-5" onclick="openQuickView(${product.id})">
+        <div class="p-5">
           <div class="flex items-center justify-between mb-1">
             <p class="text-xs text-amber-400/70 font-medium uppercase tracking-wider">${product.subcategory}</p>
             <div class="flex items-center gap-1">
