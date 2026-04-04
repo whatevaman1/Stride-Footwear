@@ -120,7 +120,7 @@
         <p class="text-gray-400 text-sm leading-relaxed mb-4" ng-bind="review.text"></p>
         <div ng-if="getProductForReview(review)" class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
           <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
-            <img ng-src="{{paths.IMG_PATH}}{{getProductForReview(review).image}}" alt="{{getProductForReview(review).name}}" class="w-full h-full object-contain p-1.5">
+            <img ng-src="{{getProductForReview(review).image}}" alt="{{getProductForReview(review).name}}" class="w-full h-full object-contain p-1.5">
           </div>
           <div>
             <p class="text-sm font-medium text-white" ng-bind="getProductForReview(review).name"></p>

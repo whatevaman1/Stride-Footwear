@@ -7,6 +7,20 @@
 // === AngularJS Module ===
 var app = angular.module('strideApp', []);
 
+app.config(['$httpProvider', function($httpProvider) {
+  $httpProvider.interceptors.push(['$q', function($q) {
+    return {
+      request: function(config) {
+        var token = localStorage.getItem('stride_token');
+        if (token && config.url.indexOf('/api/') !== -1) {
+          config.headers.Authorization = 'Bearer ' + token;
+        }
+        return config;
+      }
+    };
+  }]);
+}]);
+
 // =============================================
 // PATH CONSTANTS
 // =============================================
@@ -23,9 +37,31 @@ app.constant('PATHS', (function() {
 // =============================================
 // PRODUCT DATA SERVICE
 // =============================================
-app.factory('ProductService', function() {
-  // Products, Reviews, Orders from data.js (global PRODUCTS, REVIEWS, DUMMY_ORDERS)
+app.factory('ProductService', ['$http', '$q', function($http, $q) {
+  var promise = null;
+
   return {
+    fetchProducts: function() {
+      if (!promise) {
+        promise = $http.get('http://localhost:3000/api/products').then(function(res) {
+          PRODUCTS.length = 0;
+          res.data.forEach(function(p) { PRODUCTS.push(p); });
+          
+          PRODUCTS.forEach(function(p) { p.popularity = p.reviewCount + Math.floor(p.rating * 50); });
+          
+          var brandsSet = new Set(PRODUCTS.map(function(p) { return p.brand; }));
+          BRANDS.length = 0; 
+          Array.from(brandsSet).sort().forEach(function(b) { BRANDS.push(b); });
+          
+          var stylesSet = new Set(PRODUCTS.map(function(p) { return p.style; }));
+          STYLES.length = 0; 
+          Array.from(stylesSet).sort().forEach(function(s) { STYLES.push(s); });
+          
+          return PRODUCTS;
+        });
+      }
+      return promise;
+    },
     getProducts: function() { return PRODUCTS; },
     getProductById: function(id) { return PRODUCTS.find(function(p) { return p.id === id; }); },
     getReviews: function() { return REVIEWS; },
@@ -34,6 +70,7 @@ app.factory('ProductService', function() {
     getStyles: function() { return STYLES; },
     formatPrice: function(price) { return '₹' + price.toLocaleString('en-IN'); },
     renderStars: function(rating) {
+      if (!rating) return [];
       var stars = [];
       for (var i = 1; i <= 5; i++) {
         stars.push({ filled: i <= Math.round(rating) });
@@ -41,109 +78,129 @@ app.factory('ProductService', function() {
       return stars;
     }
   };
-});
+}]);
 
 // =============================================
-// CART SERVICE (localStorage)
+// CART SERVICE (API)
 // =============================================
-app.factory('CartService', ['$rootScope', function($rootScope) {
-  var CART_KEY = 'stride_cart';
+app.factory('CartService', ['$rootScope', '$http', 'AuthService', 'ToastService', function($rootScope, $http, AuthService, ToastService) {
+  var _cart = [];
 
-  function getCart() {
-    try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
-    catch(e) { return []; }
+  function fetchCart() {
+    if (!AuthService.getUser()) return;
+    $http.get('http://localhost:3000/api/cart').then(function(res) {
+      _cart = res.data;
+      $rootScope.$broadcast('cart:updated');
+    }).catch(function(err) {});
   }
 
-  function saveCart(cart) {
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    $rootScope.$broadcast('cart:updated');
-  }
+  $rootScope.$on('auth:updated', function() {
+    if (AuthService.getUser()) fetchCart();
+    else { _cart = []; $rootScope.$broadcast('cart:updated'); }
+  });
+  if (AuthService.getUser()) fetchCart();
 
   return {
-    getCart: getCart,
-    getCount: function() {
-      return getCart().reduce(function(sum, item) { return sum + item.qty; }, 0);
-    },
-    getTotal: function() {
-      return getCart().reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
-    },
+    getCart: function() { return _cart; },
+    getCount: function() { return _cart.reduce(function(sum, item) { return sum + item.qty; }, 0); },
+    getTotal: function() { return _cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0); },
     addToCart: function(product, size, qty) {
-      qty = qty || 1;
-      var cart = getCart();
-      var idx = cart.findIndex(function(item) { return item.productId === product.id && item.size === size; });
-      if (idx >= 0) {
-        cart[idx].qty += qty;
-      } else {
-        cart.push({
-          productId: product.id, name: product.name, price: product.price,
-          image: product.image, size: size || product.sizes[0], qty: qty, brand: product.brand
-        });
+      if (!AuthService.getUser()) {
+         ToastService.show('Please log in first', 'warning');
+         return Promise.reject('Not logged in');
       }
-      saveCart(cart);
-      return product.name + ' added to cart!';
+      qty = qty || 1;
+      size = size || product.sizes[0];
+      return $http.post('http://localhost:3000/api/cart', { productId: product.id, size: size, qty: qty })
+        .then(function() {
+          fetchCart();
+          return product.name + ' added to cart!';
+        });
     },
     removeFromCart: function(productId, size) {
-      var cart = getCart().filter(function(item) {
-        return !(item.productId === productId && item.size === size);
-      });
-      saveCart(cart);
+      if (!AuthService.getUser()) return;
+      $http.delete('http://localhost:3000/api/cart/' + productId + '/' + encodeURIComponent(size))
+        .then(function() { fetchCart(); });
     },
     updateQty: function(productId, size, newQty) {
-      var cart = getCart();
-      var item = cart.find(function(i) { return i.productId === productId && i.size === size; });
-      if (item) {
-        if (newQty <= 0) {
-          cart = cart.filter(function(i) { return !(i.productId === productId && i.size === size); });
-        } else {
-          item.qty = newQty;
-        }
-        saveCart(cart);
-      }
+      if (!AuthService.getUser()) return;
+      $http.put('http://localhost:3000/api/cart', { productId: productId, size: size, qty: newQty })
+        .then(function() { fetchCart(); });
     },
     clearCart: function() {
-      localStorage.removeItem(CART_KEY);
-      $rootScope.$broadcast('cart:updated');
+      if (!AuthService.getUser()) return;
+      $http.delete('http://localhost:3000/api/cart').then(function() { fetchCart(); });
     }
   };
 }]);
 
 // =============================================
-// WISHLIST SERVICE (localStorage)
+// WISHLIST SERVICE (API)
 // =============================================
-app.factory('WishlistService', ['$rootScope', function($rootScope) {
-  var WISH_KEY = 'stride_wishlist';
+app.factory('WishlistService', ['$rootScope', '$http', 'AuthService', 'ToastService', function($rootScope, $http, AuthService, ToastService) {
+  var _list = [];
 
-  function getList() {
-    try { return JSON.parse(localStorage.getItem(WISH_KEY)) || []; }
-    catch(e) { return []; }
+  function fetchList() {
+    if (!AuthService.getUser()) return;
+    $http.get('http://localhost:3000/api/wishlist').then(function(res) {
+      _list = res.data;
+      $rootScope.$broadcast('wishlist:updated');
+    }).catch(function(err) {});
   }
 
-  function saveList(list) {
-    localStorage.setItem(WISH_KEY, JSON.stringify(list));
-    $rootScope.$broadcast('wishlist:updated');
-  }
+  $rootScope.$on('auth:updated', function() {
+    if (AuthService.getUser()) fetchList();
+    else { _list = []; $rootScope.$broadcast('wishlist:updated'); }
+  });
+  if (AuthService.getUser()) fetchList();
 
   return {
-    getList: getList,
-    getCount: function() { return getList().length; },
-    isInWishlist: function(productId) { return getList().indexOf(productId) >= 0; },
+    getList: function() { return _list; },
+    getCount: function() { return _list.length; },
+    isInWishlist: function(productId) { return _list.indexOf(productId) >= 0; },
     toggle: function(productId) {
-      var list = getList();
-      var idx = list.indexOf(productId);
-      var msg;
-      if (idx >= 0) {
-        list.splice(idx, 1);
-        msg = 'Removed from wishlist';
-      } else {
-        list.push(productId);
-        msg = 'Added to wishlist! ❤️';
+      if (!AuthService.getUser()) {
+         ToastService.show('Please log in for wishlist', 'warning');
+         return Promise.reject('Not logged in');
       }
-      saveList(list);
-      return { added: idx < 0, message: msg };
+      var idx = _list.indexOf(productId);
+      if (idx >= 0) {
+        _list.splice(idx, 1);
+        $rootScope.$broadcast('wishlist:updated');
+        return $http.delete('http://localhost:3000/api/wishlist/' + productId).then(function() {
+          return { added: false, message: 'Removed from wishlist' };
+        });
+      } else {
+        _list.push(productId);
+        $rootScope.$broadcast('wishlist:updated');
+        return $http.post('http://localhost:3000/api/wishlist', { productId: productId }).then(function() {
+          return { added: true, message: 'Added to wishlist! ❤️' };
+        });
+      }
     },
     clearAll: function() {
-      localStorage.removeItem(WISH_KEY);
-      $rootScope.$broadcast('wishlist:updated');
+      if (!AuthService.getUser()) return;
+      $http.delete('http://localhost:3000/api/wishlist').then(function() { fetchList(); });
+    }
+  };
+}]);
+
+// =============================================
+// ORDER SERVICE (API)
+// =============================================
+app.factory('OrderService', ['$http', 'AuthService', function($http, AuthService) {
+  return {
+    placeOrder: function(billingData) {
+      if (!AuthService.getUser()) return Promise.reject('Not logged in');
+      return $http.post('http://localhost:3000/api/orders', billingData).then(function(res) {
+        return res.data;
+      });
+    },
+    fetchOrders: function() {
+      if (!AuthService.getUser()) return Promise.resolve([]);
+      return $http.get('http://localhost:3000/api/orders').then(function(res) {
+        return res.data;
+      });
     }
   };
 }]);
@@ -153,18 +210,24 @@ app.factory('WishlistService', ['$rootScope', function($rootScope) {
 // =============================================
 app.factory('AuthService', ['$rootScope', function($rootScope) {
   var USER_KEY = 'stride_user';
+  var TOKEN_KEY = 'stride_token';
 
   return {
     getUser: function() {
       try { return JSON.parse(localStorage.getItem(USER_KEY)); }
       catch(e) { return null; }
     },
-    saveUser: function(user) {
+    getToken: function() {
+      return localStorage.getItem(TOKEN_KEY);
+    },
+    saveUser: function(user, token) {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (token) localStorage.setItem(TOKEN_KEY, token);
       $rootScope.$broadcast('auth:updated');
     },
     logout: function() {
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(TOKEN_KEY);
       $rootScope.$broadcast('auth:updated');
     }
   };
@@ -202,7 +265,7 @@ app.constant('VALIDATORS', {
     message: 'Name must be 2-50 characters (letters and spaces only)'
   },
   phone: {
-    regex: /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
+    regex: /^[\+]?[0-9\s\-\.]{7,15}$/,
     message: 'Please enter a valid phone number'
   }
 });
@@ -217,6 +280,17 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
   $scope.wishCount = WishlistService.getCount();
   $scope.user = AuthService.getUser();
   $scope.mobileMenuOpen = false;
+  
+  $scope.globalLoading = true;
+  ProductService.fetchProducts().then(function() {
+    $scope.globalLoading = false;
+    $rootScope.$broadcast('PRODUCTS_READY');
+  }).catch(function(err) {
+    console.error("Failed to load products:", err);
+    $scope.globalLoading = false;
+    $rootScope.$broadcast('PRODUCTS_READY');
+  });
+
   $scope.formatPrice = ProductService.formatPrice;
   $scope.renderStars = ProductService.renderStars;
 
@@ -285,20 +359,27 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
   $scope.quickAddToCart = function(productId) {
     var product = ProductService.getProductById(productId);
     if (product) {
-      var msg = CartService.addToCart(product, product.sizes[0]);
-      ToastService.show(msg, 'success');
+      CartService.addToCart(product, product.sizes[0], 1).then(function(msg) {
+        ToastService.show(msg, 'success');
+      }).catch(function(){});
     }
   };
 
   // Toggle wishlist (global helper)
   $scope.toggleWishlist = function(productId, $event) {
     if ($event) $event.stopPropagation();
-    var result = WishlistService.toggle(productId);
-    ToastService.show(result.message, result.added ? 'success' : 'info');
+    WishlistService.toggle(productId).then(function(result) {
+      ToastService.show(result.message, result.added ? 'success' : 'info');
+    }).catch(function(){});
   };
 
   $scope.isInWishlist = function(productId) {
     return WishlistService.isInWishlist(productId);
+  };
+
+  // Navigate to product detail (global helper)
+  $scope.goToProductDetail = function(productId) {
+    window.location.href = PATHS.HTML_PATH + 'product-detail.html?id=' + productId;
   };
 
   // Newsletter
@@ -347,10 +428,15 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
 // =============================================
 app.controller('HomeController', ['$scope', 'ProductService', 'WishlistService', 'CartService', 'ToastService',
 function($scope, ProductService, WishlistService, CartService, ToastService) {
-  $scope.featuredProducts = PRODUCTS.filter(function(p) { return p.badge; }).slice(0, 4);
-  $scope.reviewPreviews = REVIEWS.slice(0, 3);
   $scope.formatPrice = ProductService.formatPrice;
   $scope.renderStars = ProductService.renderStars;
+
+  function init() {
+    $scope.featuredProducts = PRODUCTS.slice(0, 4);
+    $scope.reviewPreviews = REVIEWS.slice(0, 3);
+  }
+  if (PRODUCTS.length > 0) init();
+  else $scope.$on('PRODUCTS_READY', init);
 
   $scope.categories = [
     { key: 'men', label: "Men's", emoji: '👟', href: 'html/products.html?category=men',
@@ -385,8 +471,6 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
   // Filters
   $scope.filters = {
     category: 'all',
-    priceMin: 0,
-    priceMax: 20000,
     brands: {},
     minRating: 0,
     search: '',
@@ -396,12 +480,13 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
 
   $scope.currentPage = 1;
   $scope.perPage = 8;
-  $scope.brands = BRANDS;
-
-  // Price range
-  var prices = PRODUCTS.map(function(p) { return p.price; });
-  $scope.priceMin = Math.floor(Math.min.apply(null, prices));
-  $scope.priceMax = Math.ceil(Math.max.apply(null, prices));
+  
+  function initProductsController() {
+    $scope.brands = BRANDS;
+  }
+  
+  if (PRODUCTS.length > 0) initProductsController();
+  else $scope.$on('PRODUCTS_READY', initProductsController);
 
   // URL params
   var params = new URLSearchParams(window.location.search);
@@ -440,10 +525,6 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
     if ($scope.filters.category !== 'all') {
       result = result.filter(function(p) { return p.category === $scope.filters.category; });
     }
-
-    result = result.filter(function(p) {
-      return p.price >= $scope.filters.priceMin && p.price <= $scope.filters.priceMax;
-    });
 
     var selectedBrands = Object.keys($scope.filters.brands).filter(function(b) { return $scope.filters.brands[b]; });
     if (selectedBrands.length > 0) {
@@ -490,8 +571,7 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
 
   $scope.refreshProducts = function() {
     $scope.filteredProducts = $scope.getFilteredProducts();
-    $scope.totalPages = Math.ceil($scope.filteredProducts.length / $scope.perPage);
-    $scope.paginatedProducts = $scope.filteredProducts.slice(0, $scope.currentPage * $scope.perPage);
+    $scope.paginatedProducts = $scope.filteredProducts;
     updateBreadcrumbs();
   };
 
@@ -517,8 +597,7 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
 
   $scope.clearAllFilters = function() {
     $scope.filters = {
-      category: 'all', priceMin: 0, priceMax: 20000,
-      brands: {}, minRating: 0, search: '', sort: 'featured', styleFilter: 'all'
+      category: 'all',
     };
     $scope.currentPage = 1;
     $scope.refreshProducts();
@@ -541,25 +620,7 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
 
   $scope.ratingOptions = [4, 3, 2, 1];
 
-  $scope.goToPage = function(page) {
-    if (page < 1 || page > $scope.totalPages) return;
-    $scope.currentPage = page;
-    $scope.refreshProducts();
-    window.scrollTo({ top: 300, behavior: 'smooth' });
-  };
 
-  $scope.loadMore = function() {
-    if ($scope.currentPage < $scope.totalPages) {
-      $scope.currentPage++;
-      $scope.refreshProducts();
-    }
-  };
-
-  $scope.getPages = function() {
-    var pages = [];
-    for (var i = 1; i <= $scope.totalPages; i++) pages.push(i);
-    return pages;
-  };
 
   $scope.getDiscount = function(product) {
     if (!product.originalPrice) return 0;
@@ -587,9 +648,10 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
 
   $scope.addToCartFromQuickView = function() {
     if ($scope.quickViewProduct) {
-      var msg = CartService.addToCart($scope.quickViewProduct, $scope.selectedSize);
-      ToastService.show(msg, 'success');
-      $scope.closeQuickView();
+      CartService.addToCart($scope.quickViewProduct, $scope.selectedSize, 1).then(function(msg) {
+        ToastService.show(msg, 'success');
+        $scope.closeQuickView();
+      }).catch(function(){});
     }
   };
 
@@ -617,10 +679,66 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
   });
 
   // Initial load with skeleton delay
-  $timeout(function() {
-    $scope.loading = false;
-    $scope.refreshProducts();
-  }, 600);
+  function finishInit() {
+    $timeout(function() {
+      $scope.loading = false;
+      $scope.refreshProducts();
+    }, 600);
+  }
+  
+  if (PRODUCTS.length > 0) finishInit();
+  else $scope.$on('PRODUCTS_READY', finishInit);
+}]);
+
+// =============================================
+// PRODUCT DETAIL PAGE CONTROLLER
+// =============================================
+app.controller('ProductDetailController', ['$scope', 'ProductService', 'CartService', 'WishlistService', 'ToastService', 'PATHS',
+function($scope, ProductService, CartService, WishlistService, ToastService, PATHS) {
+  $scope.paths = PATHS;
+  $scope.formatPrice = ProductService.formatPrice;
+  $scope.renderStars = ProductService.renderStars;
+  
+  var params = new URLSearchParams(window.location.search);
+  var productId = parseInt(params.get('id'));
+  
+  function init() {
+    $scope.product = ProductService.getProductById(productId);
+    if (!$scope.product) {
+      window.location.href = 'products.html';
+      return;
+    }
+    
+    $scope.selectedSize = $scope.product.sizes[0];
+    $scope.quantity = 1;
+    $scope.discount = $scope.product.originalPrice ? Math.round((1 - $scope.product.price / $scope.product.originalPrice) * 100) : 0;
+    
+    $scope.relatedProducts = ProductService.getProducts()
+      .filter(function(p) { return p.id !== $scope.product.id && (p.category === $scope.product.category || p.style === $scope.product.style); })
+      .slice(0, 4);
+  }
+  
+  if (PRODUCTS.length > 0) init();
+  else $scope.$on('PRODUCTS_READY', init);
+  
+  $scope.selectSize = function(size) {
+    $scope.selectedSize = size;
+  };
+  
+  $scope.incrementQty = function() {
+    $scope.quantity++;
+  };
+  
+  $scope.decrementQty = function() {
+    if ($scope.quantity > 1) $scope.quantity--;
+  };
+  
+  $scope.addToCart = function() {
+    if (!$scope.product) return;
+    CartService.addToCart($scope.product, $scope.selectedSize, $scope.quantity).then(function(msg) {
+      ToastService.show(msg, 'success');
+    }).catch(function(){});
+  };
 }]);
 
 // =============================================
@@ -697,15 +815,16 @@ function($scope, $timeout, WishlistService, ProductService, CartService, ToastSe
 
   $scope.removeFromWishlist = function(productId, $event) {
     if ($event) $event.stopPropagation();
-    WishlistService.toggle(productId);
-    ToastService.show('Removed from wishlist', 'info');
-    $scope.refreshWishlist();
+    WishlistService.toggle(productId).then(function(result) {
+      ToastService.show(result.message, 'info');
+    }).catch(function(){});
   };
 
   $scope.addToCartFromWishlist = function(product, $event) {
     if ($event) $event.stopPropagation();
-    var msg = CartService.addToCart(product, product.sizes[0]);
-    ToastService.show(msg, 'success');
+    CartService.addToCart(product, product.sizes[0], 1).then(function(msg) {
+      ToastService.show(msg, 'success');
+    }).catch(function(){});
   };
 
   $scope.clearWishlist = function() {
@@ -730,7 +849,9 @@ function($scope, $timeout, WishlistService, ProductService, CartService, ToastSe
   };
 
   $scope.$on('wishlist:updated', function() { $scope.refreshWishlist(); });
-  $scope.refreshWishlist();
+  
+  if (PRODUCTS.length > 0) $scope.refreshWishlist();
+  else $scope.$on('PRODUCTS_READY', function() { $scope.refreshWishlist(); });
 }]);
 
 // =============================================
@@ -825,8 +946,8 @@ function($scope, ProductService, ToastService, PATHS) {
 // =============================================
 // LOGIN CONTROLLER
 // =============================================
-app.controller('LoginController', ['$scope', '$timeout', 'AuthService', 'ToastService', 'VALIDATORS', 'PATHS',
-function($scope, $timeout, AuthService, ToastService, VALIDATORS, PATHS) {
+app.controller('LoginController', ['$scope', '$timeout', '$http', 'AuthService', 'ToastService', 'VALIDATORS', 'PATHS',
+function($scope, $timeout, $http, AuthService, ToastService, VALIDATORS, PATHS) {
   $scope.login = { email: '', password: '', remember: false };
   $scope.loginErrors = {};
   $scope.loginSubmitting = false;
@@ -855,17 +976,19 @@ function($scope, $timeout, AuthService, ToastService, VALIDATORS, PATHS) {
 
     if (emailValid && passValid) {
       $scope.loginSubmitting = true;
-      $timeout(function() {
-        var user = {
-          name: $scope.login.email.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }),
-          email: $scope.login.email,
-          phone: '+91 98765 43210',
-          joinDate: new Date().toISOString().split('T')[0]
-        };
-        AuthService.saveUser(user);
+      $http.post('http://localhost:3000/api/auth/login', {
+        email: $scope.login.email,
+        password: $scope.login.password
+      }).then(function(res) {
+        $scope.loginSubmitting = false;
+        AuthService.saveUser(res.data.user, res.data.token);
         ToastService.show('Welcome back! Redirecting...', 'success');
         $timeout(function() { window.location.href = PATHS.HTML_PATH + 'account.html'; }, 1000);
-      }, 1500);
+      }).catch(function(err) {
+        $scope.loginSubmitting = false;
+        var msg = (err.data && err.data.error) ? err.data.error : 'Login failed. Please try again.';
+        ToastService.show(msg, 'error');
+      });
     }
   };
 
@@ -877,8 +1000,8 @@ function($scope, $timeout, AuthService, ToastService, VALIDATORS, PATHS) {
 // =============================================
 // SIGNUP CONTROLLER
 // =============================================
-app.controller('SignupController', ['$scope', '$timeout', 'AuthService', 'ToastService', 'VALIDATORS', 'PATHS',
-function($scope, $timeout, AuthService, ToastService, VALIDATORS, PATHS) {
+app.controller('SignupController', ['$scope', '$timeout', '$http', 'AuthService', 'ToastService', 'VALIDATORS', 'PATHS',
+function($scope, $timeout, $http, AuthService, ToastService, VALIDATORS, PATHS) {
   $scope.signup = { name: '', email: '', phone: '', password: '', confirmPassword: '', terms: false };
   $scope.signupErrors = {};
   $scope.signupSubmitting = false;
@@ -932,17 +1055,26 @@ function($scope, $timeout, AuthService, ToastService, VALIDATORS, PATHS) {
 
     if (nameValid && emailValid && phoneValid && passwordValid && confirmValid) {
       $scope.signupSubmitting = true;
-      $timeout(function() {
-        var user = {
-          name: $scope.signup.name.trim(),
-          email: $scope.signup.email.trim(),
-          phone: $scope.signup.phone.trim(),
-          joinDate: new Date().toISOString().split('T')[0]
-        };
-        AuthService.saveUser(user);
+      $http.post('http://localhost:3000/api/auth/register', {
+        name: $scope.signup.name.trim(),
+        email: $scope.signup.email.trim(),
+        password: $scope.signup.password
+      }).then(function(res) {
+        $scope.signupSubmitting = false;
+        // Inject phone into the user object just for frontend display purposes if needed 
+        // (could also update backend to handle phone in the future)
+        var user = res.data.user;
+        user.phone = $scope.signup.phone.trim();
+        user.joinDate = new Date().toISOString().split('T')[0];
+        
+        AuthService.saveUser(user, res.data.token);
         ToastService.show('Account created successfully!', 'success');
         $timeout(function() { window.location.href = PATHS.HTML_PATH + 'account.html'; }, 1000);
-      }, 1500);
+      }).catch(function(err) {
+        $scope.signupSubmitting = false;
+        var msg = (err.data && err.data.error) ? err.data.error : 'Registration failed. Please try again.';
+        ToastService.show(msg, 'error');
+      });
     }
   };
 }]);
@@ -1010,12 +1142,18 @@ function($scope, $timeout, ToastService, VALIDATORS) {
 // =============================================
 // ACCOUNT CONTROLLER
 // =============================================
-app.controller('AccountController', ['$scope', 'AuthService', 'ToastService', 'ProductService', 'PATHS',
-function($scope, AuthService, ToastService, ProductService, PATHS) {
+app.controller('AccountController', ['$scope', 'AuthService', 'ToastService', 'ProductService', 'OrderService', 'PATHS',
+function($scope, AuthService, ToastService, ProductService, OrderService, PATHS) {
   $scope.paths = PATHS;
   $scope.formatPrice = ProductService.formatPrice;
   $scope.user = AuthService.getUser();
-  $scope.recentOrders = DUMMY_ORDERS.slice(0, 3);
+  $scope.recentOrders = [];
+
+  if ($scope.user) {
+    OrderService.fetchOrders().then(function(orders) {
+      $scope.recentOrders = orders.slice(0, 3);
+    });
+  }
 
   if (!$scope.user) {
     ToastService.show('Please sign in to view your account', 'warning');
@@ -1041,28 +1179,31 @@ function($scope, AuthService, ToastService, ProductService, PATHS) {
 // =============================================
 // ORDERS CONTROLLER
 // =============================================
-app.controller('OrdersController', ['$scope', 'ProductService', 'PATHS',
-function($scope, ProductService, PATHS) {
+app.controller('OrdersController', ['$scope', 'ProductService', 'OrderService', 'PATHS',
+function($scope, ProductService, OrderService, PATHS) {
   $scope.paths = PATHS;
   $scope.formatPrice = ProductService.formatPrice;
-  $scope.orders = DUMMY_ORDERS;
+  $scope.orders = [];
+  $scope.stats = { total: 0, delivered: 0, active: 0, cancelled: 0 };
 
-  $scope.stats = {
-    total: DUMMY_ORDERS.length,
-    delivered: DUMMY_ORDERS.filter(function(o) { return o.status === 'Delivered'; }).length,
-    active: DUMMY_ORDERS.filter(function(o) { return o.status === 'Processing' || o.status === 'Shipped'; }).length,
-    cancelled: DUMMY_ORDERS.filter(function(o) { return o.status === 'Cancelled'; }).length
-  };
+  OrderService.fetchOrders().then(function(orders) {
+    $scope.orders = orders;
+    $scope.stats = {
+      total: orders.length,
+      delivered: orders.filter(function(o) { return o.status === 'Delivered'; }).length,
+      active: orders.filter(function(o) { return o.status === 'Processing' || o.status === 'Shipped'; }).length,
+      cancelled: orders.filter(function(o) { return o.status === 'Cancelled'; }).length
+    };
+  });
 }]);
 
 // =============================================
 // PAYMENT CONTROLLER
 // =============================================
-app.controller('PaymentController', ['$scope', '$timeout', 'CartService', 'ProductService', 'AuthService', 'ToastService', 'PATHS',
-function($scope, $timeout, CartService, ProductService, AuthService, ToastService, PATHS) {
+app.controller('PaymentController', ['$scope', '$timeout', 'CartService', 'ProductService', 'AuthService', 'ToastService', 'OrderService', 'PATHS',
+function($scope, $timeout, CartService, ProductService, AuthService, ToastService, OrderService, PATHS) {
   $scope.paths = PATHS;
   $scope.formatPrice = ProductService.formatPrice;
-  $scope.cart = CartService.getCart();
   $scope.paymentErrors = {};
   $scope.processing = false;
   $scope.paymentSuccess = false;
@@ -1077,16 +1218,28 @@ function($scope, $timeout, CartService, ProductService, AuthService, ToastServic
   $scope.previewExpiry = 'MM/YY';
   $scope.cardType = '💳';
 
-  // Cart summary
-  var subtotal = CartService.getTotal();
-  $scope.subtotal = subtotal;
-  $scope.shipping = subtotal >= 8000 ? 0 : 499;
-  $scope.tax = subtotal * 0.08;
-  $scope.total = subtotal + $scope.shipping + $scope.tax;
+  $scope.cartLoaded = false;
 
-  if ($scope.cart.length === 0) {
-    window.location.href = PATHS.HTML_PATH + 'cart.html';
-  }
+  $scope.refreshCart = function() {
+    $scope.cart = CartService.getCart();
+    var subtotal = CartService.getTotal();
+    $scope.subtotal = subtotal;
+    $scope.shipping = (subtotal > 0 && subtotal >= 8000) ? 0 : 499;
+    $scope.tax = subtotal * 0.08;
+    $scope.total = subtotal + (subtotal > 0 ? $scope.shipping : 0) + $scope.tax;
+
+    // Redirect to cart if empty, but only after it loads, and not if we just completed payment.
+    if ($scope.cartLoaded && $scope.cart.length === 0 && !$scope.processing && !$scope.paymentSuccess) {
+      window.location.href = PATHS.HTML_PATH + 'cart.html';
+    }
+  };
+
+  $scope.$on('cart:updated', function() {
+    $scope.cartLoaded = true;
+    $scope.refreshCart();
+  });
+
+  $scope.refreshCart();
 
   $scope.onCardNumberInput = function() {
     var value = ($scope.card.number || '').replace(/\D/g, '');
@@ -1150,15 +1303,27 @@ function($scope, $timeout, CartService, ProductService, AuthService, ToastServic
 
     if (valid) {
       $scope.processing = true;
-      $timeout(function() {
-        var cart = CartService.getCart();
-        var orderId = 'ORD-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
-        sessionStorage.setItem('stride_last_order', JSON.stringify({ orderId: orderId, items: cart }));
+
+      var billingData = {
+        address: $scope.billing.address,
+        city: $scope.billing.city,
+        zip: $scope.billing.zip
+      };
+
+      OrderService.placeOrder(billingData).then(function(response) {
+        sessionStorage.setItem('stride_last_order', JSON.stringify({ orderId: response.order.orderId, items: response.order.items }));
         $scope.paymentSuccess = true;
+
+        // Force rootScope clear logic through the service to sync across windows/tabs faster, but the backend natively cleared it anyway.
         CartService.clearCart();
+
         ToastService.show('Order placed successfully! 🎉', 'success');
         $timeout(function() { window.location.href = 'order-confirmation.html'; }, 1200);
-      }, 2500);
+      }).catch(function(err) {
+        $scope.processing = false;
+        var msg = (err.data && err.data.error) ? err.data.error : 'Payment failed. Please try again.';
+        ToastService.show(msg, 'error');
+      });
     }
   };
 }]);
@@ -1222,23 +1387,3 @@ app.directive('strideStars', function() {
   };
 });
 
-// Price range slider directive  
-app.directive('priceRangeSlider', function() {
-  return {
-    restrict: 'A',
-    link: function(scope, element) {
-      scope.$watchGroup(['filters.priceMin', 'filters.priceMax'], function() {
-        var fill = element[0].querySelector('.range-fill');
-        var minInput = element[0].querySelector('.range-min');
-        var maxInput = element[0].querySelector('.range-max');
-        if (!fill || !minInput || !maxInput) return;
-        var min = parseInt(minInput.min);
-        var max = parseInt(minInput.max);
-        var left = ((scope.filters.priceMin - min) / (max - min)) * 100;
-        var right = 100 - ((scope.filters.priceMax - min) / (max - min)) * 100;
-        fill.style.left = left + '%';
-        fill.style.right = right + '%';
-      });
-    }
-  };
-});

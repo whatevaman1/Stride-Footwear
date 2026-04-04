@@ -80,7 +80,7 @@
         <div class="p-5">
           <div ng-repeat="item in order.items" class="flex items-center gap-4 py-3 border-b border-white/5" ng-class="{'border-0': $last}">
             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 flex-shrink-0">
-              <img ng-src="{{paths.IMG_PATH}}{{item.image}}" alt="{{item.name}}" class="w-full h-full object-contain p-2">
+              <img ng-src="{{item.image}}" alt="{{item.name}}" class="w-full h-full object-contain p-2">
             </div>
             <div class="flex-1 min-w-0">
               <p class="font-medium text-white text-sm" ng-bind="item.name"></p>

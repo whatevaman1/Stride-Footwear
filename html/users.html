@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Users Data</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: #f59e0b;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background-color: #1a1a1a;
+      color: #aaa;
+    }
+    td {
+      background-color: #111;
+      font-family: monospace;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Users Table Data</h1>
+  <div id="loading">Loading data...</div>
+  <table id="users-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Password Hash</th>
+      </tr>
+    </thead>
+    <tbody id="users-body"></tbody>
+  </table>
+  <h2>Raw JSON</h2>
+  <pre id="raw-json"></pre>
+
+  <script>
+    fetch('http://localhost:3000/api/users')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+        
+        const tbody = document.getElementById('users-body');
+        if (data.length > 0) {
+          document.getElementById('users-table').style.display = 'table';
+          data.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${user.id}</td>
+              <td>${user.name}</td>
+              <td>${user.email}</td>
+              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${user.password_hash}">${user.password_hash}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      })
+      .catch(err => {
+        document.getElementById('loading').textContent = 'Error loading data: ' + err.message;
+      });
+  </script>
+</body>
+</html>
