@@ -391,6 +391,49 @@ app.get('/api/orders', authenticateToken, (req, res) => {
   });
 });
 
+// ================= REVIEWS ENDPOINTS =================
+// Get all reviews
+app.get('/api/reviews', (req, res) => {
+  db.all('SELECT * FROM reviews ORDER BY date DESC, id DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Post a new review
+app.post('/api/reviews', (req, res) => {
+  const { name, rating, title, text, productId } = req.body;
+  if (!name || !rating || !text) {
+    return res.status(400).json({ error: 'Name, rating, and text are required' });
+  }
+
+  const avatar = name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const date = new Date().toISOString().split('T')[0];
+
+  db.run(
+    'INSERT INTO reviews (name, avatar, rating, date, title, text, product_id, verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, avatar, rating, date, title, text, productId || null, 0],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      db.get('SELECT * FROM reviews WHERE id = ?', [this.lastID], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json(row);
+      });
+    }
+  );
+});
+
+// Mark review as helpful
+app.put('/api/reviews/:id/helpful', (req, res) => {
+  const { id } = req.params;
+  db.run('UPDATE reviews SET helpful_count = helpful_count + 1 WHERE id = ?', [id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Review not found' });
+    res.json({ message: 'Marked as helpful' });
+  });
+});
+
 app.listen(port, () => {
   console.log(`✅ Stride Footwear Backend API listening at http://localhost:${port}`);
 });
