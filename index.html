@@ -167,7 +167,7 @@
         <a href="html/products.html" class="btn-secondary text-sm">View All →</a>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="featured-grid">
-        <div ng-repeat="product in featuredProducts" class="product-card animate-fade-in-up" ng-style="{'animation-delay': ($index * 0.1) + 's'}" ng-click="goToProductDetail(product.id)" style="cursor: pointer;">
+        <div ng-repeat="product in featuredProducts" class="product-card animate-fade-in-up" ng-style="{'animation-delay': ($index * 0.1) + 's'}">
           <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
             <div ng-if="product.badge" class="product-badge" ng-bind="product.badge"></div>
             <img ng-src="{{product.image}}" alt="{{product.name}}" class="w-full h-full object-contain p-6" loading="lazy">

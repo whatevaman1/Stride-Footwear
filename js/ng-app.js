@@ -63,12 +63,12 @@ app.factory('ProductService', ['$http', '$q', function($http, $q) {
       return promise;
     },
     getProducts: function() { return PRODUCTS; },
-    getProductById: function(id) { return PRODUCTS.find(function(p) { return p.id === id; }); },
+    getProductById: function(id) { return PRODUCTS.find(function(p) { return p.id == id; }); },
     getReviews: function() { return REVIEWS; },
     getOrders: function() { return DUMMY_ORDERS; },
     getBrands: function() { return BRANDS; },
     getStyles: function() { return STYLES; },
-    formatPrice: function(price) { return '₹' + price.toLocaleString('en-IN'); },
+    formatPrice: function(price) { if (!price && price !== 0) return ''; return '₹' + price.toLocaleString('en-IN'); },
     renderStars: function(rating) {
       if (!rating) return [];
       var stars = [];
@@ -205,6 +205,37 @@ app.factory('OrderService', ['$http', 'AuthService', function($http, AuthService
   };
 }]);
 
+// REVIEW SERVICE
+// =============================================
+app.factory('ReviewService', ['$http', '$rootScope', function($http, $rootScope) {
+  var _reviews = [];
+
+  return {
+    fetchReviews: function() {
+      return $http.get('http://localhost:3000/api/reviews').then(function(res) {
+        _reviews = res.data;
+        REVIEWS = _reviews; 
+        $rootScope.$broadcast('REVIEWS_READY');
+        return _reviews;
+      });
+    },
+    getReviews: function() {
+      return _reviews;
+    },
+    submitReview: function(reviewData) {
+      return $http.post('http://localhost:3000/api/reviews', reviewData).then(function(res) {
+        _reviews.unshift(res.data);
+        REVIEWS = _reviews;
+        $rootScope.$broadcast('REVIEWS_READY');
+        return res.data;
+      });
+    },
+    markHelpful: function(reviewId) {
+      return $http.put('http://localhost:3000/api/reviews/' + reviewId + '/helpful');
+    }
+  };
+}]);
+
 // =============================================
 // AUTH SERVICE (localStorage)
 // =============================================
@@ -273,8 +304,8 @@ app.constant('VALIDATORS', {
 // =============================================
 // ROOT CONTROLLER (Nav, Footer, Toast, Global State)
 // =============================================
-app.controller('AppController', ['$scope', '$rootScope', 'PATHS', 'CartService', 'WishlistService', 'AuthService', 'ToastService', 'ProductService',
-function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, ToastService, ProductService) {
+app.controller('AppController', ['$scope', '$rootScope', 'PATHS', 'CartService', 'WishlistService', 'AuthService', 'ToastService', 'ProductService', 'ReviewService',
+function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, ToastService, ProductService, ReviewService) {
   $scope.paths = PATHS;
   $scope.cartCount = CartService.getCount();
   $scope.wishCount = WishlistService.getCount();
@@ -289,6 +320,10 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
     console.error("Failed to load products:", err);
     $scope.globalLoading = false;
     $rootScope.$broadcast('PRODUCTS_READY');
+  });
+
+  ReviewService.fetchReviews().catch(function(err) {
+    console.error("Failed to load reviews:", err);
   });
 
   $scope.formatPrice = ProductService.formatPrice;
@@ -377,10 +412,6 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
     return WishlistService.isInWishlist(productId);
   };
 
-  // Navigate to product detail (global helper)
-  $scope.goToProductDetail = function(productId) {
-    window.location.href = PATHS.HTML_PATH + 'product-detail.html?id=' + productId;
-  };
 
   // Newsletter
   $scope.newsletterEmail = '';
@@ -426,17 +457,22 @@ function($scope, $rootScope, PATHS, CartService, WishlistService, AuthService, T
 // =============================================
 // HOME PAGE CONTROLLER
 // =============================================
-app.controller('HomeController', ['$scope', 'ProductService', 'WishlistService', 'CartService', 'ToastService',
-function($scope, ProductService, WishlistService, CartService, ToastService) {
+app.controller('HomeController', ['$scope', 'ProductService', 'WishlistService', 'CartService', 'ToastService', 'ReviewService',
+function($scope, ProductService, WishlistService, CartService, ToastService, ReviewService) {
   $scope.formatPrice = ProductService.formatPrice;
   $scope.renderStars = ProductService.renderStars;
 
-  function init() {
+  $scope.featuredProducts = [];
+  $scope.reviewPreviews = [];
+
+  function initHome() {
     $scope.featuredProducts = PRODUCTS.slice(0, 4);
-    $scope.reviewPreviews = REVIEWS.slice(0, 3);
+    $scope.reviewPreviews = ReviewService.getReviews().slice(0, 3);
   }
-  if (PRODUCTS.length > 0) init();
-  else $scope.$on('PRODUCTS_READY', init);
+
+  if (PRODUCTS.length > 0) initHome();
+  $scope.$on('PRODUCTS_READY', initHome);
+  $scope.$on('REVIEWS_READY', initHome);
 
   $scope.categories = [
     { key: 'men', label: "Men's", emoji: '👟', href: 'html/products.html?category=men',
@@ -690,56 +726,6 @@ function($scope, $timeout, ProductService, CartService, WishlistService, ToastSe
   else $scope.$on('PRODUCTS_READY', finishInit);
 }]);
 
-// =============================================
-// PRODUCT DETAIL PAGE CONTROLLER
-// =============================================
-app.controller('ProductDetailController', ['$scope', 'ProductService', 'CartService', 'WishlistService', 'ToastService', 'PATHS',
-function($scope, ProductService, CartService, WishlistService, ToastService, PATHS) {
-  $scope.paths = PATHS;
-  $scope.formatPrice = ProductService.formatPrice;
-  $scope.renderStars = ProductService.renderStars;
-  
-  var params = new URLSearchParams(window.location.search);
-  var productId = parseInt(params.get('id'));
-  
-  function init() {
-    $scope.product = ProductService.getProductById(productId);
-    if (!$scope.product) {
-      window.location.href = 'products.html';
-      return;
-    }
-    
-    $scope.selectedSize = $scope.product.sizes[0];
-    $scope.quantity = 1;
-    $scope.discount = $scope.product.originalPrice ? Math.round((1 - $scope.product.price / $scope.product.originalPrice) * 100) : 0;
-    
-    $scope.relatedProducts = ProductService.getProducts()
-      .filter(function(p) { return p.id !== $scope.product.id && (p.category === $scope.product.category || p.style === $scope.product.style); })
-      .slice(0, 4);
-  }
-  
-  if (PRODUCTS.length > 0) init();
-  else $scope.$on('PRODUCTS_READY', init);
-  
-  $scope.selectSize = function(size) {
-    $scope.selectedSize = size;
-  };
-  
-  $scope.incrementQty = function() {
-    $scope.quantity++;
-  };
-  
-  $scope.decrementQty = function() {
-    if ($scope.quantity > 1) $scope.quantity--;
-  };
-  
-  $scope.addToCart = function() {
-    if (!$scope.product) return;
-    CartService.addToCart($scope.product, $scope.selectedSize, $scope.quantity).then(function(msg) {
-      ToastService.show(msg, 'success');
-    }).catch(function(){});
-  };
-}]);
 
 // =============================================
 // CART PAGE CONTROLLER
@@ -857,36 +843,44 @@ function($scope, $timeout, WishlistService, ProductService, CartService, ToastSe
 // =============================================
 // REVIEWS PAGE CONTROLLER
 // =============================================
-app.controller('ReviewsController', ['$scope', 'ProductService', 'ToastService', 'PATHS',
-function($scope, ProductService, ToastService, PATHS) {
+app.controller('ReviewsController', ['$scope', 'ProductService', 'ReviewService', 'ToastService', 'PATHS',
+function($scope, ProductService, ReviewService, ToastService, PATHS) {
   $scope.paths = PATHS;
   $scope.formatPrice = ProductService.formatPrice;
   $scope.renderStars = ProductService.renderStars;
-  $scope.reviews = REVIEWS;
+  
+  $scope.reviews = ReviewService.getReviews();
   $scope.currentFilter = 'all';
   $scope.showWriteForm = false;
   $scope.reviewRating = 0;
   $scope.newReview = { name: '', title: '', text: '' };
 
+  $scope.$on('REVIEWS_READY', function() {
+    $scope.reviews = ReviewService.getReviews();
+  });
+
   // Rating distribution
   $scope.getRatingDistribution = function() {
     var counts = [0, 0, 0, 0, 0];
-    REVIEWS.forEach(function(r) { counts[r.rating - 1]++; });
-    var total = REVIEWS.length;
+    $scope.reviews.forEach(function(r) { 
+      var rating = Math.round(r.rating);
+      if (rating >= 1 && rating <= 5) counts[rating - 1]++; 
+    });
+    var total = $scope.reviews.length;
     return [5, 4, 3, 2, 1].map(function(star) {
       return { star: star, count: counts[star - 1], pct: total ? (counts[star - 1] / total * 100) : 0 };
     });
   };
 
   $scope.getOverallRating = function() {
-    var total = REVIEWS.length;
+    var total = $scope.reviews.length;
     if (!total) return 0;
-    return (REVIEWS.reduce(function(s, r) { return s + r.rating; }, 0) / total).toFixed(1);
+    return ($scope.reviews.reduce(function(s, r) { return s + r.rating; }, 0) / total).toFixed(1);
   };
 
   $scope.getFilteredReviews = function() {
-    if ($scope.currentFilter === 'all') return REVIEWS;
-    return REVIEWS.filter(function(r) { return r.rating === $scope.currentFilter; });
+    if ($scope.currentFilter === 'all') return $scope.reviews;
+    return $scope.reviews.filter(function(r) { return Math.round(r.rating) === $scope.currentFilter; });
   };
 
   $scope.filterReviews = function(rating) {
@@ -915,27 +909,29 @@ function($scope, ProductService, ToastService, PATHS) {
       return;
     }
 
-    REVIEWS.unshift({
-      id: REVIEWS.length + 1,
+    var reviewData = {
       name: $scope.newReview.name,
-      avatar: $scope.newReview.name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase(),
       rating: $scope.reviewRating,
-      date: new Date().toISOString().split('T')[0],
       title: $scope.newReview.title,
       text: $scope.newReview.text,
-      productId: null,
-      verified: false
-    });
+      productId: null
+    };
 
-    ToastService.show('Thank you for your review! ⭐', 'success');
-    $scope.newReview = { name: '', title: '', text: '' };
-    $scope.reviewRating = 0;
-    $scope.showWriteForm = false;
+    ReviewService.submitReview(reviewData).then(function() {
+      ToastService.show('Thank you for your review! ⭐', 'success');
+      $scope.newReview = { name: '', title: '', text: '' };
+      $scope.reviewRating = 0;
+      $scope.showWriteForm = false;
+    }).catch(function(err) {
+      ToastService.show('Failed to submit review', 'error');
+    });
   };
 
   $scope.markHelpful = function(review) {
-    review.helpfulCount = (review.helpfulCount || 0) + 1;
-    review.markedHelpful = true;
+    ReviewService.markHelpful(review.id).then(function() {
+      review.helpful_count = (review.helpful_count || 0) + 1;
+      review.marked_helpful = true;
+    });
   };
 
   $scope.reportReview = function() {

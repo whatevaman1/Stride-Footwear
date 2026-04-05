@@ -101,6 +101,24 @@ db.serialize(() => {
     )
   `);
 
+  // Create reviews table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      avatar TEXT,
+      rating INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      title TEXT,
+      text TEXT NOT NULL,
+      product_id INTEGER,
+      verified BOOLEAN DEFAULT 0,
+      helpful_count INTEGER DEFAULT 0,
+      marked_helpful BOOLEAN DEFAULT 0,
+      FOREIGN KEY(product_id) REFERENCES products(id)
+    )
+  `);
+
   const stmt = db.prepare(`
     INSERT INTO products (sku, name, brand, price, originalPrice, category, subcategory, style, image, description, sizes, rating, reviewCount, color)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -167,7 +185,26 @@ db.serialize(() => {
     })
     .on('end', () => {
       stmt.finalize();
-      console.log(`✅ Database successfully seeded with ${count} products.`);
-      db.close();
+      
+      // Insert initial dummy reviews
+      const initialReviews = [
+        { name: "Aarav Sharma", avatar: "AS", rating: 5, date: "2026-03-15", title: "Best running shoes I've ever owned!", text: "The Velocity Runner is absolutely incredible. The cushioning is responsive without being too soft, and I've shaved 30 seconds off my 5K time. The breathable mesh keeps my feet cool even during summer runs in Delhi. Worth every rupee!", productId: 1, verified: 1 },
+        { name: "Priya Mehta", avatar: "PM", rating: 5, date: "2026-03-12", title: "Beautiful Juttis — perfect for my wedding!", text: "The Embroidered Jutti is stunning! The phulkari work is intricate and the quality is outstanding. I wore them for my sangeet ceremony and got so many compliments. Comfortable enough to dance all night in!", productId: 9, verified: 1 },
+        { name: "Rohan Verma", avatar: "RV", rating: 4, date: "2026-03-10", title: "Authentic Kolhapuri — great quality", text: "Really happy with the Kolhapuri Chappal. Comfortable right out of the box with no break-in period. The leather quality is exactly what you'd expect from traditional Maharashtrian craftsmanship. Pairs perfectly with kurtas.", productId: 4, verified: 1 },
+        { name: "Ananya Iyer", avatar: "AI", rating: 5, date: "2026-03-08", title: "My daughter loves her Little Mojari!", text: "Got the Little Mojari for my 7-year-old for her school's ethnic day and she won't take them off! The thread work is beautiful and they're surprisingly comfortable. She's now asking for one in every colour.", productId: 14, verified: 1 },
+        { name: "Arjun Patel", avatar: "AP", rating: 5, date: "2026-03-05", title: "Premium Nagra shoes — perfect for sherwani", text: "The Nagra Ethnic Shoe is the finest traditional footwear I've owned. The gold thread embroidery is exquisite and the curved toe design is authentic. Wore them with my sherwani at a family wedding — absolutely regal!", productId: 5, verified: 1 },
+        { name: "Sneha Kulkarni", avatar: "SK", rating: 4, date: "2026-03-01", title: "Love the Block Heel Ethnic design!", text: "The Block Heel Ethnic is exactly what I needed — modern comfort with traditional aesthetics. The zardozi work is gorgeous and the block heel makes it easy to walk in. Perfect for pujas and office parties alike!", productId: 11, verified: 0 },
+        { name: "Vikram Reddy", avatar: "VR", rating: 5, date: "2026-02-28", title: "Trail Blazer conquered the Western Ghats!", text: "The Trail Blazer Boot handled everything I threw at it — rain, muddy trails in Coorg, rocky terrain in Munnar. Completely waterproof and the ankle support is phenomenal. My go-to trekking boot now.", productId: 6, verified: 1 },
+        { name: "Divya Nair", avatar: "DN", rating: 4, date: "2026-02-25", title: "Cloud Walker — perfect for Mumbai walks", text: "The Cloud Walker is my go-to everyday sneaker. Whether I'm navigating Mumbai's streets or heading to Marine Drive for a walk, these are incredibly comfortable. The memory foam insole is a game-changer!", productId: 7, verified: 1 }
+      ];
+
+      const reviewStmt = db.prepare('INSERT INTO reviews (name, avatar, rating, date, title, text, product_id, verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      initialReviews.forEach(r => {
+        reviewStmt.run(r.name, r.avatar, r.rating, r.date, r.title, r.text, r.productId, r.verified);
+      });
+      reviewStmt.finalize(() => {
+        console.log(`✅ Database successfully seeded with ${count} products and initial reviews.`);
+        db.close();
+      });
     });
 });

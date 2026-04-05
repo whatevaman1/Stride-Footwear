@@ -351,7 +351,7 @@ function renderProducts() {
       : 0;
 
     return `
-      <div class="product-card animate-fade-in-up" onclick="window.location.href='product-detail.html?id=${product.id}'" style="cursor: pointer; animation-delay: ${Math.min(i * 0.05, 0.4)}s">
+      <div class="product-card animate-fade-in-up" style="animation-delay: ${Math.min(i * 0.05, 0.4)}s">
         <div class="product-img relative h-56 bg-gradient-to-br from-gray-900 to-gray-800">
           ${product.badge ? `<div class="product-badge">${product.badge.toUpperCase()}</div>` : ''}
           <button class="wishlist-btn ${wishlisted ? 'active' : ''}" data-id="${product.id}" onclick="event.stopPropagation(); toggleWishlist(${product.id})">
